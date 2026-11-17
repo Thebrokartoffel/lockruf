@@ -481,7 +481,8 @@ export class AudioEngine {
     const g = this.gain(0);
     const nodes = build(g);
     g.gain.setTargetAtTime(level, this.now, 0.5);
-    const L = { g, nodes, level, set: (v, tc = 0.8) => { L.level = v; g.gain.setTargetAtTime(v, this.now, tc); } };
+    // nur neue Zielwerte setzen: sonst sammeln sich bei jedem Simulationsschritt Automationsereignisse an
+    const L = { g, nodes, level, set: (v, tc = 0.8) => { if (Math.abs(v - L.level) < 0.003 && tc === L.tc) return; L.level = v; L.tc = tc; g.gain.cancelScheduledValues(this.now); g.gain.setTargetAtTime(v, this.now, tc); } };
     this.loops[name] = L;
     return L;
   }

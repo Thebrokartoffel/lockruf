@@ -93,6 +93,29 @@
   #phone .reply .opt { display: block; width: 100%; background: #1e1e24; border: 1px solid #333; color: #ddd; border-radius: 14px; padding: 6px 10px; font-size: 12px; margin-top: 5px; text-align: left; }
   #phone .reply .opt b { color: #2f6fe4; margin-right: 6px; }
   #phone .reply .ph { color: #666; font-size: 12px; padding: 8px 4px; }
+
+  /* Gesprächsauswahl (Figuren direkt ansprechen) */
+  #choice { position: fixed; left: 50%; bottom: 17%; transform: translateX(-50%); display: none; flex-direction: column; gap: 8px; z-index: 17; min-width: 340px; max-width: 80vw; }
+  #choice.show { display: flex; }
+  #choice .who { font-size: 12px; letter-spacing: .2em; color: var(--dim); text-align: center; margin-bottom: 2px; text-shadow: 0 0 6px #000; }
+  #choice .opt { background: rgba(10,10,12,.72); border: 1px solid rgba(255,255,255,.18); border-radius: 6px; padding: 9px 14px; font-size: 16px; cursor: pointer; pointer-events: auto; text-shadow: 0 1px 2px #000; }
+  #choice .opt b { display: inline-block; min-width: 22px; margin-right: 10px; padding: 0 6px; border: 1px solid var(--dim); border-radius: 4px; text-align: center; font-size: 13px; }
+  #choice .opt:hover { border-color: rgba(255,255,255,.5); }
+  /* Dietrich-Minispiel */
+  #pick { position: fixed; inset: 0; display: none; place-items: center; z-index: 18; background: radial-gradient(circle at 50% 50%, rgba(0,0,0,.25), rgba(0,0,0,.85)); }
+  #pick.show { display: grid; }
+  #pick canvas { width: min(62vh, 80vw); height: min(62vh, 80vw); }
+  #pick .info { position: absolute; left: 50%; bottom: 9%; transform: translateX(-50%); text-align: center; font-size: 14px; color: var(--dim); text-shadow: 0 0 6px #000; line-height: 1.6; }
+  #pick .info b { color: var(--ui); border: 1px solid var(--dim); border-radius: 4px; padding: 0 6px; margin: 0 3px; }
+  #pick .tbtn { position: absolute; right: 7vw; bottom: 14%; width: 110px; height: 110px; border-radius: 50%; border: 2px solid rgba(255,255,255,.5); background: rgba(0,0,0,.4); color: #ddd; font-size: 14px; display: none; pointer-events: auto; }
+  body.touch #pick .tbtn { display: block; }
+  /* Taschen im Handy */
+  #phone .inv { padding: 6px 10px; overflow: auto; flex: 1; }
+  #phone .inv .it { display: flex; gap: 10px; padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,.06); }
+  #phone .inv .ic { width: 34px; height: 34px; flex: none; border-radius: 8px; background: #2a2d34; display: grid; place-items: center; font-size: 18px; }
+  #phone .inv .nm { font-size: 13px; color: #e8e8e8; }
+  #phone .inv .ds { font-size: 11px; color: #9a9aa2; margin-top: 2px; line-height: 1.35; }
+  #phone .inv .empty { color: #777; font-size: 12px; text-align: center; margin-top: 30px; }
   #phone .tabs { display: flex; justify-content: center; gap: 8px; font-size: 10px; color: #777; padding-bottom: 8px; }
   #phone .tabs span.on { color: #ddd; }
   #phone canvas { flex: 1; width: 100%; }
@@ -294,6 +317,8 @@
 <div id="dev"></div>
 <div id="replay">SPULE ZURÜCK …</div>
 <div id="touch"></div>
+<div id="choice"></div>
+<div id="pick"><canvas width="600" height="600"></canvas><div class="info"></div><button class="tbtn">DREHEN<br>(halten)</button></div>
 <div id="menu"></div>
 <div id="clickstart">KLICKEN ZUM FORTFAHREN</div>
 <div id="rotate"><div class="ph"></div>HANDY QUER HALTEN<div class="sub">Lässt sich nicht drehen (z. B. in einer App mit fester Ausrichtung)? Link im Browser öffnen oder Drehsperre lösen.</div><button class="go">Trotzdem hochkant spielen</button></div>

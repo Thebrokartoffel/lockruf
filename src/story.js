@@ -48,7 +48,20 @@ export class Story {
   until(fn) { return this._w(fn); }
   reach(x, z, r = 3) { return this._w(() => Math.hypot(G.player.p.x - x, G.player.p.z - z) < r); }
   use(it) { return this._w(() => it.used); }
-  async say(text, dur = 3.4, who = null) { G.ui.say(text, dur, who, !who); await this.wait(dur * 0.92); }
+  async say(text, dur = 3.4, who = null) {
+    G.ui.say(text, dur, who, !who);
+    const c = who && this.speaker(who);
+    if (c) { c.say(dur * 0.85); if (G.audio.ready) { const h = c.headObj.getWorldPosition(new THREE.Vector3()); G.audio.babble({ pos: h, dur: Math.min(dur * 0.8, 4), voice: who, vol: 0.45 }); } }
+    await this.wait(dur * 0.92);
+  }
+  // Hauptgeschichte spricht erst weiter, wenn gerade kein Nebengespräch läuft (keine überlappenden Untertitel)
+  async sayMain(text, dur, who = null) { await this.until(() => !this.busyTalk); return this.say(text, dur, who); }
+  // sprechende Figur zum Namen im Untertitel (Mund bewegt sich mit)
+  speaker(who) {
+    const O = G.objects, H = O.home || {};
+    const c = { Mama: H.mom, Papa: H.dad, Deniz: O.deniz, Mara: O.mara, Nessa: O.nessa }[who];
+    return c && c.root && c.root.visible && c.say ? c : null;
+  }
   obj(t) { G.ui.objective(t); }
   // Spielzeit-Timer, der beim Kapitelwechsel verfällt
   after(sec, fn) { const tok = this.token; return gAfter(sec, () => { if (tok === this.token) fn(); }); }
@@ -179,6 +192,20 @@ export class Story {
     O.fuseState = [true, ch <= 5, true];
     for (let i = 0; i < 3; i++) O.fuse.setVisual(i, O.fuseState[i]);
     O.gate.reset();
+    if (O.gatter) O.gatter.reset(ch);
+    if (O.potKey) O.potKey.reset(ch);
+    if (O.lockpick) O.lockpick.reset(ch);
+    if (O.extra) {
+      const E = O.extra;
+      E.blackCar.gone(ch >= 3); E.payphone.rang = false; E.payphone.answered = false;
+      O.mara.root.visible = ch === 2; O.nessa.root.visible = ch === 2;
+      E.mara.lamp.enabled = ch === 2; E.mara.glow.visible = ch === 2; E.nessa.carLamp.enabled = ch === 2;
+      O.mara.lookAt(null); O.nessa.lookAt(null); O.nessa.stand('phone'); O.mara.stand('rail');
+    }
+    if (A.ready) { A.stopLoop('radio', 0.3); A.stopLoop('phoneStatic', 0.1); A.engine && A.engine('blackCar', null, false); }
+    if (G.lockpick && G.lockpick.active) G.lockpick.stop(false);
+    G.ui.clearChoice && G.ui.clearChoice();
+    this.busyTalk = false;
     for (const r of G.world.regions) if (['bank', 'stream', 'alley', 'gardens'].includes(r.id)) r.enabled = ch >= 7;
     O.man.show(false);
     O.silhouette.root.visible = false;
@@ -673,40 +700,54 @@ export class Story {
     A.slam(V(P.homeSpawn[0] - 1.2, 1, P.homeSpawn[2]), 0.25);
     G.ui.card('01:52', 'Wendelsweg', 2.6);
     this.obj('Geh zum Goetheturm');
+    this.ch2Extras();
+    // Gatter von Anfang an benutzbar (Schlüssel oder Dietrich kann man schon vorher haben)
+    this.gatterSetup();
+    // wer schon durchs offene Gatter in den Wald läuft, wird nicht von der Turm-Szene festgehalten
+    this.addUp(() => {
+      const gt = G.objects.gatter;
+      if (this._ch2end || !gt || !gt.open || pl.p.z < gt.z + 0.8) return;
+      this._ch2end = true;
+      if (!(this.st2 && this.st2.towerDone)) { G.ui.reply = null; G.ui.renderPhone(); this.msg('bin schon im wald. komm einfach'); }
+      this.run(3, false);
+    });
     this.glimpse(7.4, -84.5, { minD: 12, maxD: 36, when: () => pl.p.z > -120 && pl.p.z < -92, label: 'Schatten an der Straße' });
     await this.wait(2.5);
-    await this.say('Halloween. Und die ganze Straße schläft.', 3.2);
+    await this.sayMain('Halloween. Und die ganze Straße schläft.', 3.2);
     await this.until(() => pl.p.z > -102);
-    await this.say('Der Kürbis brennt noch.', 2.6);
+    await this.sayMain('Der Kürbis brennt noch.', 2.6);
     await this.until(() => pl.p.z > -73);
     this.setClock('02:01');
     this.mark('Am Spielplatz');
-    await this.say('Der Goetheturm. Nachts sieht der noch höher aus.', 3.4);
+    await this.sayMain('Der Goetheturm. Nachts sieht der noch höher aus.', 3.4);
     this.obj('Finde Deniz am Turm');
     this.glimpse(19.5, -43.5, { minD: 10, maxD: 30, when: () => pl.p.z > -68, label: 'Schatten hinter dem Turm' });
     let canSeen = false;
     this.interact({ story: true, pos: O.can.position, radius: 0.12, range: 2.2, text: 'Dose ansehen', onUse: () => { canSeen = true; G.ui.say('Deniz\' Energy. Noch kalt. Er war hier.', 3.6); } });
     this.interact({ story: true, pos: G.towerSign, radius: 0.5, range: 3, text: 'Schild lesen', onUse: () => G.ui.say('„Vom 01.11. bis 31.03. geschlossen.“ Also ab morgen.', 3.6) });
     await this.until(() => Math.hypot(pl.p.x - P.tower[0], pl.p.z - P.tower[1]) < 13 || canSeen);
-    await this.say('Deniz?', 1.8, 'Leon');
+    await this.sayMain('Deniz?', 1.8, 'Leon');
     await this.wait(1.2);
     A.owl(V(-30, 12, -20));
-    await this.say('Keiner da.', 2.2);
+    await this.sayMain('Keiner da.', 2.2);
     // Dose gefunden, an der Bank oder spätestens nach 10 s weiter
     const t0 = G.time;
     await this.until(() => canSeen || Math.hypot(pl.p.x - P.canBench[0], pl.p.z - P.canBench[1]) < 4 || G.time - t0 > 10);
     await this.wait(4);
+    await this.until(() => !this.busyTalk);
     this.mark('Deniz schreibt: im Wald');
     this.msg('bin schon im wald');
     await this.wait(1.6);
     this.msg('nimm den kiesweg hinterm spielplatz, einfach geradeaus');
-    await this.say('Der wartet nicht mal auf mich.', 3);
+    await this.sayMain('Der wartet nicht mal auf mich.', 3);
     await this.reply(['warum wartest du nicht?', 'ernsthaft?']);
     await this.wait(1.4);
     this.msg('komm einfach');
-    this.obj('Folge der Hügelschneise in den Wald');
-    await this.until(() => pl.p.z > -30.5);
-    this.run(3, false);
+    const st2 = this.st2 || (this.st2 = {}), gt = O.gatter;
+    st2.towerDone = true;
+    this.obj(gt && !gt.open && st2.gateSeen ? 'Finde einen Weg durch das Gatter' : 'Folge der Hügelschneise in den Wald');
+    // weiter geht es, sobald Leon durch das offene Gatter ist (siehe Sicherung oben)
+    if (!gt) { await this.until(() => pl.p.z > -30.5); this.run(3, false); }
   }
 
   // ================================================================
@@ -1246,7 +1287,7 @@ export class Story {
       // weg vom Licht, zurück in die Gasse, dann weg
       const tgt = V(-92, 0, 106);
       const d = V(tgt.x - c.pos.x, 0, tgt.z - c.pos.z); const l = d.length();
-      if (c.stateT < 1.2) { man.stand(); man.armR.sh.rotation.x = -1.9; man.armR.el.rotation.x = 0.6; face(pl.p.x, pl.p.z); }
+      if (c.stateT < 1.2) { man.play('point', { fade: 0.2 }); face(pl.p.x, pl.p.z); }
       else if (l > 0.3) { d.divideScalar(l); c.pos.addScaledVector(d, Math.min(l, 2.2 * dt)); man.root.rotation.y = Math.atan2(-d.x, -d.z); man.walk(dt, 2.2); }
       if (c.stateT > 1.2 && c.stateT < 1.4) M.torch.intensity = 0;
       if (c.stateT > 4.5) { c.state = 'gone'; M.show(false); A.heartbeat(false); }

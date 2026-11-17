@@ -170,7 +170,7 @@ export class Player {
     let speed = st.speed * (sprinting ? SPRINT_MUL : Math.max(0.35, mag)) * this.speedMul;
     if (G.phoneOpen) speed *= 0.75;
     if (sprinting) {
-      this.stamina = Math.max(0, this.stamina - dt / SPRINT_SECS);
+      this.stamina = Math.max(0, this.stamina - dt / (SPRINT_SECS * (G.inv && G.inv.has('energy') ? 1.35 : 1)));   // Nessas Energy: länger rennen
       if (this.stamina <= 0) { this.exhausted = 1; G.audio.breath(1.3); }
     } else this.regen(dt, len > 0);
     if (this.stamina < 0.4 && (this._breathT = (this._breathT || 0) - dt) < 0) { G.audio.breath(1 - this.stamina); this._breathT = this.exhausted ? 0.8 : 1.15; }
@@ -363,6 +363,8 @@ export class Player {
     if (this.flashOn && G.phone.battery < 6) fi *= 0.55 + 0.45 * (Math.sin(G.time * 31) > -0.92 ? 1 : 0.2);
     if (this.flashFlicker > 0) { this.flashFlicker -= dt; fi *= Math.sin(G.time * 97) > 0 ? 0.1 : 1; }
     this.flash.intensity = fi;
+    // Schattenkarte nur rendern, wenn die Lampe wirklich leuchtet (spart einen kompletten Szenendurchlauf)
+    this.flash.shadow.autoUpdate = fi > 0.01;
     this.glow.position.copy(hand);
     this.glow.intensity = (G.phoneOpen && !G.phone.dropped) ? 0.6 : 0;
   }

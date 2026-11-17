@@ -110,8 +110,8 @@ export function buildOutside(scene, world, M) {
   for (let x = -20; x <= 20; x += 13) house(B, M, scene, world, x, -161, 12, 10, (x + 40) % 4, 'south', false);
   world.addBox(-30, 30, -156, -152);
   // Lücken zwischen Häusern zu
-  for (const z of [-138, -124, -110, -96, -82]) { world.addBox(-20, -8.4, z - 1, z + 1); world.addBox(8.4, 20, z + 3, z + 5); }
-  for (const z of [-138, -124, -110, -96]) { B.add(boxGeo(0.1, 1.8, 2, 1), M.planksTower, -8.6, 0.9, z); B.add(boxGeo(0.1, 1.8, 2, 1), M.planksTower, 8.6, 0.9, z + 4); }
+  for (const z of [-138, -124, -110, -96, -82]) { world.addBox(-20, -8.4, z - 1, z + 1); if (z !== -124) world.addBox(8.4, 20, z + 3, z + 5); }
+  for (const z of [-138, -124, -110, -96]) { B.add(boxGeo(0.1, 1.8, 2, 1), M.planksTower, -8.6, 0.9, z); if (z !== -124) B.add(boxGeo(0.1, 1.8, 2, 1), M.planksTower, 8.6, 0.9, z + 4); }
   // Vorgärten: niedrige Hecken
   for (const z of houseZ) {
     for (const sx of [-1, 1]) {
@@ -123,10 +123,7 @@ export function buildOutside(scene, world, M) {
   // Laternen
   const lampPos = [[-5.9, -146], [-5.9, -121], [-5.9, -96], [5.9, -133], [5.9, -108], [5.9, -83]];
   for (const [x, z] of lampPos) streetLamp(B, M, scene, world, x, z, x < 0 ? 1 : -1);
-  // geparkte Autos
-  car(B, M, 2.35, -141, 0, 0x2a3540); car(B, M, 2.35, -119, 0, 0x5a1c18);
-  car(B, M, 2.35, -98, Math.PI, 0x3c3c3a); car(B, M, -2.35, -126, Math.PI, 0x1e2a22); car(B, M, -2.35, -106, 0, 0x6a6a66);
-  for (const [x, z] of [[2.35, -141], [2.35, -119], [2.35, -98], [-2.35, -126], [-2.35, -106]]) world.addBox(x - 0.95, x + 0.95, z - 2.15, z + 2.15, -1, 1.5);
+  // geparkte Autos: siehe extra.js (Modelle von GGBot, CC0)
   // Mülltonnen
   for (const [x, z] of [[-7.2, -128], [-7.2, -127.2], [7.2, -100], [7.2, -113]]) { B.add(boxGeo(0.6, 1.0, 0.7, 1), lam('bin' + (x > 0 ? 1 : 0), { color: x > 0 ? 0x2a3a52 : 0x3a3a3a }), x, 0.5, z); world.addBox(x - 0.3, x + 0.3, z - 0.35, z + 0.35, -1, 1.0); }
   // Kürbis auf einer Treppe (Halloween)
@@ -560,18 +557,18 @@ function buildSky(scene) {
   const g = new THREE.SphereGeometry(900, 32, 16);
   const m = new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { time: { value: 0 } },
+    uniforms: { time: { value: 0 }, fogCol: { value: new THREE.Color(0x15171d) } },
     vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-    fragmentShader: `varying vec3 vP;
+    fragmentShader: `varying vec3 vP; uniform vec3 fogCol;
       float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233)))*43758.5453); }
       float n(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(h(i),h(i+vec2(1,0)),f.x), mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x), f.y); }
       void main(){
         float y = max(vP.y, 0.0);
         vec3 zen = vec3(0.006,0.008,0.014), hor = vec3(0.02,0.022,0.03);
         vec3 c = mix(hor, zen, pow(y, 0.45));
-        // Stadtglühen im Norden
+        // Stadtglühen im Norden (kommt nach dem Horizontdunst dazu)
         float north = max(0.0, -vP.z);
-        c += vec3(0.09,0.05,0.025) * pow(north, 1.6) * pow(1.0 - y, 4.0);
+        vec3 glow = vec3(0.09,0.05,0.025) * pow(north, 1.6) * pow(1.0 - y, 4.0);
         // Wolken
         vec2 q = vP.xz / (vP.y + 0.25) * 2.0;
         float cl = n(q) * 0.6 + n(q * 2.3) * 0.3 + n(q*5.1)*0.1;
@@ -584,6 +581,9 @@ function buildSky(scene) {
         // vom Mond angeleuchtete Wolkenränder
         c += vec3(0.05, 0.06, 0.08) * cover * pow(mdot, 6.0);
         c += vec3(0.02,0.019,0.022) * smoothstep(0.45, 0.85, cl) * smoothstep(0.0, 0.3, y) + vec3(0.03,0.018,0.01) * smoothstep(0.45, 0.85, cl) * pow(north, 2.0) * (1.0 - y);
+        // Dunst am Horizont: geht nahtlos in die Nebelfarbe über (keine Kante am Ende der Sichtweite)
+        c = mix(fogCol, c, smoothstep(-0.02, 0.3, vP.y));
+        c += glow * smoothstep(-0.08, 0.03, vP.y) * 0.85;
         gl_FragColor = vec4(c, 1.0);
       }`,
   });
@@ -649,7 +649,7 @@ function house(B, M, scene, world, cx, cz, w, depth, variant, facing, isHome) {
   }
 }
 
-function streetLamp(B, M, scene, world, x, z, dir) {
+export function streetLamp(B, M, scene, world, x, z, dir) {
   B.add(cylGeo(0.07, 0.1, 6, 8, 1), M.darkMetal, x, 3, z);
   B.add(boxGeo(1.4, 0.08, 0.08, 1), M.darkMetal, x + dir * 0.6, 5.95, z);
   B.add(boxGeo(0.6, 0.15, 0.32, 1), M.darkMetal, x + dir * 1.2, 5.9, z);

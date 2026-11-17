@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { G } from '../state.js';
 import { boxGeo, cylGeo, planeGeo, lam, makeHuman, crossGeo } from '../models.js';
 import * as T from '../textures.js';
+import { makeCharacter } from '../characters.js';
 import { prismGeo, haloSprite, emissive, signMesh } from './props.js';
 
 export const HUT = {
@@ -400,35 +401,29 @@ export function buildHut(scene, world, M, B) {
   };
 
   // ---------------- Der Mann ----------------
-  const man = makeHuman({ coat: 0x1a1c1a, pants: 0x0c0c0e, hood: true, height: 1.93, longCoat: true });
+  const man = makeCharacter('man', { height: 1.93, hood: true });
   man.root.position.set(0, -500, 0); scene.add(man.root);
+  // Taschenlampe in der rechten Hand, Lichtkegel nach vorn unten
   const torch = new THREE.SpotLight(0xfff4e0, 0, 30, 0.36, 0.5, 2);
-  torch.position.set(0.24, 0.05, -0.42); man.chest.add(torch);
-  const tgt = new THREE.Object3D(); tgt.position.set(0.15, -1.6, -8); man.chest.add(tgt); torch.target = tgt;
-  const torchGlow = haloSprite(0xfff0d8, 0.7, 0.9); torchGlow.position.copy(torch.position); man.chest.add(torchGlow);
-  const torchBody = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 0.2, 8), M.black); torchBody.rotation.x = Math.PI / 2; torchBody.position.set(0.24, 0.05, -0.32); man.chest.add(torchBody);
+  torch.position.set(0, 0.02, -0.12); man.handR.add(torch);
+  const tgt = new THREE.Object3D(); tgt.position.set(0.1, -1.4, -8); man.handR.add(tgt); torch.target = tgt;
+  const torchGlow = haloSprite(0xfff0d8, 0.7, 0.9); torchGlow.position.copy(torch.position); man.handR.add(torchGlow);
+  const torchBody = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 0.2, 8), M.black); torchBody.rotation.x = Math.PI / 2; torchBody.position.set(0, 0.02, -0.02); man.handR.add(torchBody);
   G.objects.man = {
     H: man, torch, glow: torchGlow,
     show(on) { if (!on) man.root.position.set(0, -500, 0); torch.intensity = on ? 26 : 0; torchGlow.visible = on; },
   };
 
   // Silhouette (für die Hügelschneise) – gleiche Figur, ohne Licht
-  const sil = makeHuman({ coat: 0x0e0f10, pants: 0x0a0a0a, hood: true, height: 1.93, longCoat: true });
+  const sil = makeCharacter('man', { height: 1.93, hood: true, tint: 0x55585c });
   sil.root.visible = false; scene.add(sil.root);
   G.objects.silhouette = sil;
 
   // Deniz (Ende)
-  const deniz = makeHuman({ coat: 0x5a5a5e, pants: 0x2a3550, hood: false, height: 1.78, skin: 0x8a6a54 });
+  const deniz = makeCharacter('deniz', { height: 1.78 });
+  deniz.idleClip = 'sit';
   deniz.sit();
   deniz.root.visible = false; scene.add(deniz.root);
-  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.122, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), lam('hair', { color: 0x15100c }));
-  hair.position.y = 0.14; deniz.neck.add(hair);
-  // Kapuze liegt im Nacken, Bauchtasche, weiße Sneaker
-  const hoodDown = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.05, 6, 14), lam('hoodie', { color: 0x5a5a5e }));
-  hoodDown.rotation.x = Math.PI / 2 + 0.3; hoodDown.position.set(0, 0.02, 0.04); deniz.neck.add(hoodDown);
-  const pocket = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.12, 0.03), lam('hoodiePocket', { color: 0x4e4e52 }));
-  pocket.position.set(0, 0.22, -0.16); deniz.hips.add(pocket);
-  deniz.root.traverse((o) => { if (o.isMesh && o.geometry.type === 'BoxGeometry' && o.material.color.getHex() === 0x0b0b0b) o.material = lam('sneaker', { color: 0xd8d8d2 }); });
   G.objects.deniz = deniz;
 
   // Handy am Boden (Sturz)

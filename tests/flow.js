@@ -40,7 +40,12 @@ async () => {
       await use('Dose'); __tp(4, -58);
       await reply(1);
       await waitFor('schneise obj', obj('Hügelschneise'));
-      __tp(0, -29); await waitFor('ch3', () => st().ch === 3);
+      // Holzgatter: Schlüssel liegt unterm Blumentopf am Kiosk
+      __tp(0.3, -30.6); await sleep(600);
+      log('gatter zu: ' + !__G.objects.gatter.open);
+      __tp(-20.4, -61.2); await use('Blumentopf anheben'); await use('Schlüssel nehmen');
+      __tp(0.3, -30.6); await use('aufschließen'); await waitFor('gatter offen', () => __G.objects.gatter.open, 20000);
+      __tp(0, -27.5); await waitFor('ch3', () => st().ch === 3);
     }
     if (!only || only === 3) {
       if (only) __start(3);

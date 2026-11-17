@@ -1,33 +1,47 @@
-# LOCKRUF – Assets und Lizenzen
+# Assets und Lizenzen
 
-## Grafik und Sound
-Alle Texturen, 3D-Modelle, Normal-Maps, Geräusche und die Musik-Stinger entstehen beim Start im Code
-(prozedural: Canvas-Texturen, Three.js-Geometrie, WebAudio-Synthese). Es werden **keine externen Bild-,
-Modell- oder Audiodateien** verwendet, also gibt es auch keine Fremdrechte an Inhalten.
+LOCKRUF nutzt nur Material, das frei verwendet werden darf: überwiegend CC0 (gemeinfrei), dazu einige Pakete, die eine Namensnennung verlangen. Diese Nennungen stehen hier und im Spiel unter **Hauptmenü → Credits**. Wer Assets austauscht oder ergänzt, trägt sie hier ein.
 
-Hintergrund: Die üblichen CC0-Quellen (ambientCG, Poly Haven, Kenney, Freesound, OpenGameArt) waren aus der
-Build-Umgebung nicht erreichbar. Statt Dateien unklarer Herkunft einzubauen, wurde alles selbst erzeugt.
-Wer später echte CC0-Assets ergänzt, trägt sie hier mit Quelle, Autor und Lizenz ein.
+## Pflichtnennungen
 
-| Bereich | Herkunft | Lizenz |
-|---|---|---|
-| Texturen (Laub, Rinde, Holz, Beton, Ziegel, Tapete …) | prozedural, `src/textures.js` | eigener Code |
-| Normal-/Rauheits-Maps | aus den Texturen berechnet, `src/models.js` (`normalFrom`) | eigener Code |
-| Modelle (Bäume, Häuser, Hütte, Figuren, Möbel) | prozedural, `src/models.js`, `src/level/*.js` | eigener Code |
-| Geräusche (Schritte, Schrei, Lüftung, Wind …) | WebAudio-Synthese, `src/audio.js` | eigener Code |
-| App-Icons (`web/icon-192.png`, `web/icon-512.png`) | per Skript gezeichnet | eigener Code |
+| Was | Urheber | Lizenz | Quelle | Im Spiel |
+|---|---|---|---|---|
+| Haare „Katherine Hair“, „Keylth Hair“, „Wavy Bob“ (Pack *hair02*) | Elvaerwyn | CC BY (Namensnennung) | MakeHuman Community Asset Packs, static.makehumancommunity.org | Haare von Mara, Nessa und Leons Mutter; verändert: Farbe, Alpha, Größe |
+| „A Horror Sound Pack“ | Dylan Seibert | frei für private und kommerzielle Nutzung, Nennung erbeten | https://dylanseibert-audio.itch.io/a-horror-sound-pack | `assets/sfx/amb_*`, `drone_*`, `heartbeat`, `music_title`, `scare_*`, `strike_*` (geschnitten, zu Schleifen verarbeitet, als MP3) |
+| „Horror Stinger Sound Effects“ | DHSFX | frei für Spiele, Nennung bei Veröffentlichung | https://dhsfx.itch.io/horror-stinger-sound-effects | `assets/sfx/dh_*` |
 
-## Software von Dritten
-| Paket | Zweck | Lizenz |
-|---|---|---|
-| three.js | 3D-Engine (im Spiel enthalten) | MIT, Lizenztext: `docs/LICENSE-three.txt`, Hinweis am Ende von `game.js` |
-| esbuild | Build-Werkzeug (nicht im Spiel enthalten) | MIT |
-| Electron | Windows-App-Hülle (nur in der App, nicht in der Web-Version) | MIT, enthält Chromium (Lizenzen: `LICENSES.chromium.html` im App-Ordner) |
-| reportlab | Erzeugt das Lösungs-PDF (nicht im Spiel enthalten) | BSD |
-| Playwright | automatische Tests (nicht im Spiel enthalten) | Apache-2.0 |
+## CC0 (keine Nennung nötig, trotzdem danke)
 
-## Mikrofon
-Das optionale Mikrofon wird nur lokal zur Pegelmessung genutzt. Es wird nichts aufgenommen, gespeichert oder übertragen.
+**Figuren** (`assets/chars/*.glb`, erzeugt mit MPFB 2 in Blender)
+- MakeHuman System Assets: Grundkörper, Augen, Zähne, Kleidung (casualsuit, elegantsuit, worksuit), Kurzhaar-Frisuren, Haar-Materialien – CC0
+- Shirts 01: „Bodice-style top“, „Turtleneck halter top“ – MargaretToigo, CC0
+- Shoes 01: „Floppy overknee shoes“ – Cortu, „Gogo platform boots“ – scailman, CC0
+- Skins 01: „Light skin with makeup“, „Light skin female with violet makeup“ – MargaretToigo, CC0
+- Faceunits 01 (Blinzeln, Sprechen, Lächeln) – CC0
+- Animationen: Universal Animation Library 1 und 2 (Standard) – Quaternius, CC0, https://quaternius.itch.io – auf die Figuren umgerechnet
 
-## Web-Version
-Die Web-Version lädt nichts von fremden Servern (keine Schriften, keine Bibliotheken aus dem Netz, kein Tracking). Einstellungen und Kapitel-Fortschritt liegen nur im Browser (localStorage).
+Das MPFB-Add-on selbst (GPL) ist nur Werkzeug und nicht Teil des Spiels.
+
+**Modelle** (`assets/models/*.glb`, umgewandelt, Texturen verkleinert)
+- Autos `car1`–`car8`: PSX Style Cars – GGBotNet, CC0, https://ggbot.itch.io/psx-style-cars
+- `suv`: Red SUV – som_natalino, CC0, https://som-natalino.itch.io/red-suv
+- `payphone`, `dumpster`, `cone`, `acunit`, `camera`, `bench2`: City Environment Pack – 3DModelsCC0, https://3dmodelscc0.itch.io/city-environment-pack
+- `busstop`, `mailbox`, `trashbin`, `elecbox`, `portaloo`, `roadblock`: City Environment Pack 2 – 3DModelsCC0, https://3dmodelscc0.itch.io/free-cc0-city-environment-pack-2
+- `w_*` (Fass, Karton, Müllsack, Flasche, Dose): PSX Waste – Daniel Jurys, CC0, https://daniel-jurys.itch.io/psx-waste
+- `f_*` (Sofa, Matratze, Kühlschrank, Stuhl, Regal): PSX Derelict Furniture – Daniel Jurys, CC0, https://daniel-jurys.itch.io/psx-derelict-furniture
+- `pallet`: 3D Retro Shacks, Shanties, Sheds & Gantries – chilly_durango, CC0, https://chilly-durango.itch.io/3dretroshacks
+
+**Geräusche** (`assets/sfx/*.mp3`)
+- `step_*`, `k_impact*`: Impact Sounds – Kenney, CC0, https://kenney.nl/assets/impact-sounds
+- `k_*` (Türen, Stoff, Knarzen, Schlüssel, Riegel): RPG Audio – Kenney, CC0, https://kenney.nl/assets/rpg-audio
+- `ui_*`: Interface Sounds – Kenney, CC0, https://kenney.nl/assets/interface-sounds
+- `car_*`: Soundeffekte aus PSX Style Cars – GGBotNet, CC0
+
+## Selbst erzeugt
+
+Gelände, Wald, Häuser, Wohnung, Hütte, Garagenhof-Bauten, Gatter, Schilder, Texturen (Canvas), Himmel, Licht, Post-Processing, Musik-Synth, Stimmen-Gebrabbel, Funk- und Telefongeräusche entstehen im Code (`src/`). Die Musik am Titelbildschirm und die Spannungs-Drones kommen aus dem Horror Sound Pack (siehe oben), alles andere ist prozedural.
+
+## Code
+
+- three.js (MIT), esbuild (MIT), Electron (MIT) für die Windows-App
+- Spielcode: Emil + Claude

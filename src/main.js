@@ -6,10 +6,14 @@ import { Player } from './player.js';
 import { Post } from './post.js';
 import { UI, layoutPhone } from './ui.js';
 import { AudioEngine } from './audio.js';
+import './sound.js';
 import { Input, DEFAULT_KEYS, KEY_LABELS, keyName } from './input.js';
 import { Story, CHAPTERS, Abort } from './story.js';
 import { mats, Batch } from './models.js';
 import { buildOutside } from './level/outside.js';
+import { buildExtra } from './level/extra.js';
+import './story-extra.js';
+import { Lockpick } from './lockpick.js';
 import { buildHut } from './level/hut.js';
 import { buildHome } from './level/home.js';
 import { damp } from './util.js';
@@ -19,12 +23,17 @@ import { Noise } from './noise.js';
 import { Mic } from './mic.js';
 import { Dev } from './dev.js';
 import { Touch } from './touch.js';
+import { Assets } from './assets.js';
 
 let hemi, moon, last = performance.now();
 const clickEl = () => document.getElementById('clickstart');
 
-function boot() {
+async function boot() {
   loadSettings();
+  const ld = document.getElementById('loading');
+  const ldText = ld.textContent;
+  await Assets.loadAll((k) => { ld.textContent = ldText + '  ' + Math.round(k * 100) + ' %'; });
+  ld.textContent = ldText;
   const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
   renderer.setPixelRatio(1);
   renderer.setSize(innerWidth, innerHeight);
@@ -53,6 +62,7 @@ function boot() {
   const M = mats(); G.M = M;
 
   buildOutside(scene, world, M);
+  buildExtra(scene, world, M);
   const B = new Batch(48);
   buildHut(scene, world, M, B);
   buildHome(scene, world, M, B);
@@ -63,8 +73,9 @@ function boot() {
   dust.visual = true; leaves.visual = true;
   world.updaters.push(dust, leaves);
   G.post = new Post(renderer);
-  G.post.resize(innerWidth, innerHeight);
+  G.post.resize(innerWidth, innerHeight); G.post.applyGfx();
   G.story = new Story();
+  G.lockpick = new Lockpick();
   G.dev = new Dev();
   G.simStep = simStep;
   G.touch = new Touch();
@@ -145,6 +156,7 @@ function titleMenu() {
     <button class="item" data-a="chapters">Kapitel wählen</button>
     <button class="item" data-a="settings">Einstellungen</button>
     <button class="item" data-a="controls">Steuerung</button>
+    <button class="item" data-a="credits">Credits</button>
     ${isApp ? '<button class="item" data-a="quit">Beenden</button>' : ''}
     <div class="small">Kopfhörer empfohlen. ${G.touchOn ? 'Handy quer halten.' : 'Vollbild: F11.'}<br>Stadtwald Frankfurt · 31. Oktober</div></div>`);
   bindMenu({
@@ -153,8 +165,26 @@ function titleMenu() {
     chapters: () => chapterMenu(titleMenu),
     settings: () => settingsMenu(titleMenu),
     controls: () => controlsMenu(titleMenu),
+    credits: () => creditsMenu(titleMenu),
     quit: () => window.close(),
   });
+}
+
+// Pflichtangaben der verwendeten Assets (CC-BY und Packs, die eine Nennung verlangen) plus CC0-Danksagungen
+function creditsMenu(back) {
+  G.ui.menu(`<div class="inner credits" style="max-width:640px;max-height:92vh;overflow:auto;padding-right:16px"><h1 style="font-size:40px">CREDITS</h1><div class="tag">IDEE: EMIL · CODE &amp; UMSETZUNG MIT CLAUDE</div>
+    <div class="small" style="text-align:left;line-height:1.55;font-size:13px">
+    <b>Haare (CC BY, Namensnennung):</b> Elvaerwyn – „Katherine Hair“, „Keylth Hair“, „Wavy Bob“ (MakeHuman Community, angepasst: Farbe, Transparenz)<br>
+    <b>Sounds:</b> „A Horror Sound Pack“ – Dylan Seibert (dylanseibert-audio.itch.io) · „Horror Stinger Sound Effects“ – DHSFX (dhsfx.itch.io)<br>
+    <b>Figuren:</b> MakeHuman / MPFB-Assets (CC0), Kleidung &amp; Haut: MargaretToigo, Cortu, scailman (CC0)<br>
+    <b>Animationen:</b> Universal Animation Library 1 &amp; 2 – Quaternius (CC0)<br>
+    <b>Modelle:</b> PSX Style Cars – GGBotNet · Red SUV – som_natalino · City Environment Pack 1 &amp; 2 – 3DModelsCC0 · PSX Waste &amp; PSX Derelict Furniture – Daniel Jurys · Retro Shacks – chilly_durango (alle CC0)<br>
+    <b>Geräusche:</b> Kenney Impact, RPG &amp; Interface Sounds · Autosounds von GGBotNet (CC0)<br>
+    <b>Engine:</b> three.js (MIT)<br>
+    Alles Weitere (Gelände, Häuser, Wald, Musik-Synth, Stimmen) ist im Spiel erzeugt. Vollständige Liste: ASSETS_LICENSES.md
+    </div>
+    <button class="item" data-a="back">Zurück</button></div>`);
+  bindMenu({ back });
 }
 
 function chapterMenu(back) {
@@ -194,6 +224,7 @@ function settingsMenu(back) {
     ${row('fov', 'Sichtfeld', 60, 90, 1, S.fov)}
     ${row('volume', 'Lautstärke', 0, 1, 0.05, S.volume)}
     <button class="item" data-a="invert">Maus invertieren: ${S.invertY ? 'an' : 'aus'}</button>
+    <button class="item" data-a="gfx">Grafikstufe: ${Post.LEVELS[S.gfx ?? 2]} (Raumschatten, Dunst, Schatten)</button>
     <button class="item" data-a="quality">Grafikqualität: ${S.quality === 'low' ? 'niedrig (schneller)' : 'hoch'} – gilt ab dem nächsten Start</button>
     <button class="item" data-a="mic">${micLabel()}</button>
     <button class="item" data-a="touch">Touch-Steuerung: ${S.touch === 'on' ? 'an' : S.touch === 'off' ? 'aus' : 'automatisch'}${G.touchOn ? ' (aktiv)' : ''}</button>
@@ -212,6 +243,7 @@ function settingsMenu(back) {
   bindMenu({
     back, invert: () => { S.invertY = !S.invertY; saveSettings(); settingsMenu(back); }, full: toggleFull,
     mic: () => { if (G.mic.on) { G.mic.disable(); settingsMenu(back); } else micConfirm(() => settingsMenu(back)); },
+    gfx: () => { S.gfx = ((S.gfx ?? 2) + 1) % 4; saveSettings(); G.post.applyGfx(); settingsMenu(back); },
     quality: () => { S.quality = S.quality === 'low' ? 'high' : 'low'; saveSettings(); settingsMenu(back); },
     autos: () => { S.autoScale = S.autoScale === false; saveSettings(); settingsMenu(back); },
     touch: () => { S.touch = S.touch === 'on' ? 'off' : S.touch === 'off' ? undefined : 'on'; saveSettings(); G.touch.enable(S.touch === 'on' || (S.touch !== 'off' && isTouchDevice())); settingsMenu(back); },
@@ -308,6 +340,7 @@ function resume() {
 
 function startGame(ch) {
   G.audio.init();
+  G.audio.decodeSamples();
   if (G.audio.ctx.state !== 'running') G.audio.ctx.resume();
   if (!G.audio.loops.wind) G.audio.startAmbience();
   G.ui.menu(null);
@@ -326,8 +359,9 @@ function updateEnv(dt) {
   const p = G.player.p;
   let fog = 0.058, wind = 0.5, drone = 0.28, aenv = 'forest', h = 0.62, mo = 0.42;
   const inHut = p.x > -64.5 && p.x < -59.5 && p.z > 138 && p.z < 142 && p.y > -0.5;
-  if (p.x > 400) { fog = 0.0; wind = 0.035; drone = 0.07; aenv = 'room'; h = 0.1; mo = 0; }
-  else if (p.y < -1.0) { fog = 0.0; wind = 0.02; drone = 0.16; aenv = 'cellar'; h = 0.04; mo = 0; }
+  G.viewCap = 1500;
+  if (p.x > 400) { fog = 0.0; wind = 0.035; drone = 0.07; aenv = 'room'; h = 0.1; mo = 0; G.viewCap = 60; }
+  else if (p.y < -1.0) { fog = 0.0; wind = 0.02; drone = 0.16; aenv = 'cellar'; h = 0.04; mo = 0; G.viewCap = 60; }
   else if (inHut) { fog = 0.02; wind = 0.16; drone = 0.2; aenv = 'room'; h = 0.14; mo = 0.04; }
   else if (p.z < -72) { fog = 0.026; wind = 0.18; drone = 0.05; aenv = 'street'; h = 0.4; mo = 0.25; }
   else if (p.z < -29) { fog = 0.038; wind = 0.3; drone = 0.12; }
@@ -340,10 +374,18 @@ function updateEnv(dt) {
   hemi.intensity = env.hemi * (G.settings.bright ?? 1) ** 0.5;
   moon.intensity = mo;
   const A = G.audio;
+  // Spannung für die adaptive Musik
+  const st = G.story;
+  let ten = [0.6, 0.3, 0.15, 0.35, 0.5, 0.55, 0.8, 0.85, 0.2][st ? st.chapter : 0] ?? 0.2;
+  if (st && st.chase && st.chase.state !== 'off') ten = 1;
+  if (st && st.dad && st.dad.mode !== 'sleep' && st.dad.mode !== 'off') ten = Math.max(ten, 0.7);
+  if (G.flags.tension !== undefined) ten = G.flags.tension;
+  G.tension = ten;
   if (A.ready) {
     A.env = aenv;
     A.setLoop('wind', wind, 1.5);
     A.setLoop('drone', drone, 2);
+    A.updateBeds(aenv, dt, p.x > 400 ? 'home' : aenv);
   }
 }
 
@@ -351,6 +393,7 @@ function updateEnv(dt) {
 let ambT = 14;
 function ambient(dt) {
   const ch = G.story.chapter, p = G.player.p;
+  if (G.audio.ready && ch > 0) { const fw = G.player.forward(); G.audio.rare(dt, p.x > 400 ? 'room' : p.z < -72 ? 'street' : 'forest', p, fw); }
   const active = G.flags.ambient || (ch === 3 && p.z > 14) || (ch === 6 && !G.story.chase);
   if (!active || p.x > 400 || p.y < -1) return;
   ambT -= dt; if (ambT > 0) return;
@@ -370,7 +413,7 @@ function titleCam(t) {
   const a = t * 0.03;
   cam.position.set(-14 + Math.sin(a) * 2, 1.6, -38 + Math.cos(a) * 1.5);
   cam.lookAt(-2, 15 + Math.sin(t * 0.1) * 1.5, -60);
-  G.scene.fog.density = 0.03;
+  G.scene.fog.density = 0.03; G.viewCap = 1500;
   hemi.intensity = 0.5; moon.intensity = 0.35;
 }
 
@@ -379,7 +422,10 @@ function simStep(dt, replay = false) {
   G.time += dt; G.dt = dt;
   let fired = updateTimers();
   const ui = G.ui;
-  if (G.noteOpen) {
+  if (G.pickOpen) {
+    G.lockpick.update(dt);
+    G.player.updateCamera(dt);
+  } else if (G.noteOpen) {
     if (Input.actHit('use') || Input.actHit('confirm')) ui.closeNote();
     G.player.updateCamera(dt);
   } else {
@@ -463,7 +509,7 @@ window.addEventListener('unhandledrejection', (e) => { if (e.reason instanceof A
 // Test-/Entwickler-Hooks: nur mit ?dev / ?test in der Adresse oder nach dem Einschalten des Godmode
 G.exposeHooks = () => {
   if (window.__G) return;
-  window.__G = G;
+  window.__G = G; window.__THREE = THREE;
   window.__start = (ch, cp) => { startGame(ch); if (cp) G.story.run(ch, true, cp); };
   window.__pause = () => pause();
   window.__pick = (x = 0, y = 0) => {
@@ -485,8 +531,8 @@ G.exposeHooks = () => {
 };
 if (/[?&](dev|test)\b/.test(location.search)) { G.noLock = /[?&]test\b/.test(location.search); }
 
-try { boot(); } catch (e) {
+boot().catch((e) => {
   console.error(e);
   document.getElementById('loading').textContent = 'FEHLER: ' + e.message;
-}
+});
 if (/[?&](dev|test)\b/.test(location.search)) G.exposeHooks();

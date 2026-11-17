@@ -50,7 +50,7 @@ export function loadSettings() {
     if (s.v !== 2) { G.settings.v = 2; G.settings.keys = null; }
   } catch (e) { /* egal */ }
   // erster Start am Handy: sparsame Grafik, etwas empfindlichere Kamera
-  if (!saved && isTouchDevice()) Object.assign(G.settings, { scale: 0.6, quality: 'low', grain: 0.7, sens: 1.2 });
+  if (!saved && isTouchDevice()) Object.assign(G.settings, { scale: 0.6, quality: 'low', gfx: 0, grain: 0.7, sens: 1.2 });
 }
 export function saveSettings() {
   try { localStorage.setItem('lockruf_settings', JSON.stringify(G.settings)); } catch (e) { /* egal */ }

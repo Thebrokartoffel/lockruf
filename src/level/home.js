@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { G } from '../state.js';
 import { boxGeo, cylGeo, planeGeo, lam, makeHuman } from '../models.js';
 import * as T from '../textures.js';
+import { makeCharacter } from '../characters.js';
 import { haloSprite, emissive, signMesh } from './props.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 function crossGeoLocal(w, h) { const a = new THREE.PlaneGeometry(w, h); a.translate(0, h / 2, 0); const b = a.clone(); b.rotateY(Math.PI / 2); return mergeGeometries([a.toNonIndexed(), b.toNonIndexed()]); }
@@ -524,15 +525,9 @@ export function buildHome(scene, world, M, B) {
 
   // ================= Vater =================
   world.tag = 'Vater';
-  const dad = makeHuman({ coat: 0x56626e, pants: 0x2b3038, skin: 0x8d6e5a, hood: false, height: 1.84 });
-  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.122, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), lam('dadHair', {}));
-  hair.position.set(0, 0.145, 0.01); dad.neck.add(hair);
-  const stubble = new THREE.Mesh(new THREE.SphereGeometry(0.108, 10, 8, 0, Math.PI * 2, Math.PI * 0.55, Math.PI * 0.3), lam('stubble', { color: 0x4a3a30 })); stubble.position.set(0, 0.13, -0.004); dad.neck.add(stubble);
+  const dad = makeCharacter('papa', { height: 1.84 });
   dad.root.visible = false; scene.add(dad.root);
-  const mom = makeHuman({ coat: 0x7a5c66, pants: 0x4e4048, skin: 0xa58066, hood: false, height: 1.68, longCoat: true });
-  { const mh = lam('momHair', {});
-    const capH = new THREE.Mesh(new THREE.SphereGeometry(0.118, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.56), mh); capH.position.set(0, 0.135, 0.008); mom.neck.add(capH);
-    const backH = new THREE.Mesh(boxGeo(0.23, 0.34, 0.07, 1), mh); backH.position.set(0, 0.02, 0.085); mom.neck.add(backH); }
+  const mom = makeCharacter('mama', { height: 1.68 });
   mom.root.visible = false; scene.add(mom.root);
 
   const hallLampL = world.addLamp({ pos: [503.15, CEIL_OG - 0.3, 6.9], color: 0xffe2b8, intensity: 7, distance: 8, visibleDist: 40, enabled: false });

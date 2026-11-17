@@ -14,6 +14,10 @@ Beispiele (aus dem Repo-Ordner):
   python tests/run.py tests/touch-portrait.js --touch --portrait   hochkant, Antwort direkt auf dem Handy antippen
   python tests/run.py tests/mic.js --mic          Mikrofon mit Fake-Gerät (440-Hz-Ton)
   python tests/run.py tests/release-smoke.js --build docs    gegen die GitHub-Pages-Version
+  python tests/run.py tests/extra.js              Kapitel 2: Nessa, Mara, Garagenhof, Gatter mit Dietrich (Screenshots)
+  python tests/run.py tests/rewind-ch2.js         Rückspulen mit Gespräch, Schlüssel und Gatter
+  python tests/run.py tests/gfx.js                Screenshots aller Grafikstufen
+  python tests/run.py tests/render-cost.js --low --size 480x270   GPU-Zeit pro Bild an typischen Orten
 
 Screenshots landen in tests/out/. Eigener Chrome: Umgebungsvariable CHROME=/pfad/zu/chrome.
 """
@@ -41,9 +45,12 @@ async def main(a):
             pg = await b.new_page(viewport=vp, has_touch=True, is_mobile=True, device_scale_factor=1)
             await pg.add_init_script("localStorage.removeItem('lockruf_settings')")   # erster Start am Handy
         else:
-            pg = await b.new_page(viewport={'width': 960, 'height': 540})
+            w, h = (int(v) for v in a.size.split('x'))
+            pg = await b.new_page(viewport={'width': w, 'height': h})
         if a.low:
             await pg.add_init_script("localStorage.setItem('lockruf_settings', JSON.stringify({v:2, quality:'low', scale:0.25, sens:1, grain:1, volume:0.9, fov:70, bright:1}))")
+        if os.environ.get('NOAUDIO'):
+            await pg.add_init_script('window.__NOAUDIO = 1')
         if a.only:
             await pg.add_init_script(f'window.__ONLY = {int(a.only)}')
         logs = []
@@ -62,6 +69,10 @@ async def main(a):
             print('RESULT:\n' + (r if isinstance(r, str) else json.dumps(r, indent=1)))
         except Exception as e:
             print('EXC', e)
+            for line in [x for x in logs if 'GPU stall' not in x][-40:]:
+                print(line)
+            await b.close()
+            return
         print('Zeit %.1f s' % (time.time() - t0))
         err = await pg.evaluate("[...document.querySelectorAll('div')].map(d=>d.textContent).filter(t=>t.startsWith('FEHLER')).join('\\n')")
         if err:
@@ -80,6 +91,7 @@ if __name__ == '__main__':
     ap.add_argument('--mic', action='store_true', help='Fake-Mikrofon')
     ap.add_argument('--low', action='store_true', help='Grafik niedrig, kleine Auflösung')
     ap.add_argument('--only', type=int, default=0, help='flow.js: nur dieses Kapitel')
+    ap.add_argument('--size', default='960x540', help='Fenstergröße (Desktop), z. B. 480x270')
     ap.add_argument('--timeout', type=float, default=1700, help='Sekunden')
     ap.add_argument('--prefix', default='', help='Präfix für Screenshots')
     asyncio.run(main(ap.parse_args()))

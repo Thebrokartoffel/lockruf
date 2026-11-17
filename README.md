@@ -1,7 +1,7 @@
 # LOCKRUF
 
 Kurzes 3D-Horrorspiel im Stil von Fears to Fathom. Frankfurt, Stadtwald am Goetheturm, Halloween-Nacht.
-Läuft im Browser (PC, Handy, Tablet) und als Windows-App. Texturen, Modelle und Sounds entstehen im Code, es stecken keine fremden Bild-, Modell- oder Audiodateien drin.
+Läuft im Browser (PC, Handy, Tablet) und als Windows-App. Gelände, Wald, Häuser und viele Geräusche entstehen im Code. Figuren (MakeHuman), Autos, Straßenmöbel und Sounds stammen aus freien Asset-Paketen (fast alles CC0), Herkunft und Pflichtnennungen stehen in `ASSETS_LICENSES.md` und im Spiel unter Credits.
 
 **Spielen:** https://thebrokartoffel.github.io/lockruf/
 
@@ -48,6 +48,19 @@ Im Browser holt sich das Spiel die Maus mit einem Klick ins Bild. Manche Tastenk
 
 Im Haus zählt jedes Geräusch: Rennen, Springen und knarzende Dielen wecken Papa. Geduckt ist es leise. „LAUT“ zeigt den Lärm (PC unten links, Handy oben links).
 Lösungsweg: `LOCKRUF_Guide.pdf`.
+
+## Optionales in Kapitel 2 (Straße und Goetheturm)
+
+Nichts davon muss man finden, die Story läuft auch ohne weiter.
+- **Nessa** am Wanderparkplatz: ansprechen bringt einen Tipp und einen Energydrink (Ausdauer hält länger).
+- **Mara** oben auf dem Goetheturm: „Nach oben rufen“ – sie hat in der Nacht etwas gesehen.
+- **Garagenhof** (Durchgang links der Straße): Dietrich-Set in der offenen Garage, ein Münztelefon, das klingelt, und ein schwarzes Auto.
+- **Holzgatter** am Waldweg: zwei Wege durch – Schlüssel unterm Blumentopf am Kiosk oder Schloss knacken (Minispiel: Position suchen, Taste halten zum Drehen; zu viel Druck verbiegt den Dietrich).
+Gefundene Sachen liegen auf dem Handy im Reiter „Taschen“.
+
+## Grafik
+
+Einstellungen → Grafik: niedrig (Handy-Standard), mittel, hoch, ultra. Höhere Stufen schalten Schatten, Umgebungsverdeckung, Dunst und mehr Lichter frei. Was komplett im Nebel liegt, wird gar nicht erst gezeichnet.
 
 ## Mikrofon (optional, standardmäßig aus)
 
@@ -104,8 +117,10 @@ Weitere Aufrufe stehen oben in `tests/run.py`.
 | Pfad | Inhalt |
 |---|---|
 | `src/main.js` | Start, Menüs, Spielschleife |
-| `src/story.js` | Kapitel, Dialoge, Ereignisse |
-| `src/level/` | Haus (zwei Etagen), Straße und Wald, Hütte mit Keller |
+| `src/story.js`, `story-extra.js` | Kapitel, Dialoge, Ereignisse; Nebenfiguren, Gatter, Garagenhof |
+| `src/level/` | Haus (zwei Etagen), Straße und Wald, Hütte mit Keller, `extra.js`: Parkplatz, Garagenhof, Gatter |
+| `src/characters.js`, `assets.js`, `sound.js`, `lockpick.js` | animierte Figuren, Asset-Laden, Sample-Sounds und Musik, Schloss-Minispiel |
+| `assets/` | Figuren, Modelle, Geräusche (siehe `ASSETS_LICENSES.md`) |
 | `src/player.js`, `father.js`, `noise.js` | Spieler, Vater, Geräusche |
 | `src/input.js`, `touch.js` | Eingabe-Ebene (Tastatur, Maus, Touch → Aktionen), Touch-Steuerung |
 | `src/dev.js` | Godmode mit Aufzeichnung und Rückspulen |
@@ -120,4 +135,4 @@ Weitere Aufrufe stehen oben in `tests/run.py`.
 
 ## Lizenzen
 
-three.js steht unter MIT, der Lizenztext liegt in `docs/LICENSE-three.txt` und der Hinweis am Ende von `game.js`. Herkunft aller Inhalte: `ASSETS_LICENSES.md`. Für den Spielcode selbst ist keine offene Lizenz vergeben.
+three.js steht unter MIT, der Lizenztext liegt in `docs/LICENSE-three.txt` und der Hinweis am Ende von `game.js`. Herkunft aller Inhalte und die Pflichtnennungen (Elvaerwyn, Dylan Seibert, DHSFX): `ASSETS_LICENSES.md` und Credits im Hauptmenü. Für den Spielcode selbst ist keine offene Lizenz vergeben.

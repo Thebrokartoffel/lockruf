@@ -6,10 +6,12 @@ const frag = /* glsl */`
 precision highp float;
 uniform sampler2D tDiffuse;
 uniform vec2 res;
-uniform float time, grain, aberr, vignette, flash, vhs, exposure, fade, blurAmt, bloomAmt;
-uniform sampler2D tBloom;
+uniform float time, grain, aberr, vignette, flash, vhs, exposure, fade, blurAmt, bloomAmt, aoAmt, hazeAmt, camNear, camFar;
+uniform sampler2D tBloom, tDepth;
+uniform vec3 hazeCol;
 varying vec2 vUv;
 
+float linZ(vec2 uv){ float z = texture2D(tDepth, uv).x * 2.0 - 1.0; return 2.0 * camNear * camFar / (camFar + camNear - z * (camFar - camNear)); }
 float hash(vec2 p){ p = fract(p*vec2(123.34, 456.21)); p += dot(p, p+45.32); return fract(p.x*p.y); }
 
 vec3 aces(vec3 x){ const float a=2.51,b=0.03,c=2.43,d=0.59,e=0.14; return clamp((x*(a*x+b))/(x*(c*x+d)+e),0.0,1.0); }
@@ -37,6 +39,29 @@ void main(){
   col.r = texture2D(tDiffuse, uv + dir * ca).r;
   col.g = texture2D(tDiffuse, uv).g;
   col.b = texture2D(tDiffuse, uv - dir * ca).b;
+
+
+  // Raumschatten (SSAO-light): 8 Nachbarn im Bildschirmraum, nur Verdeckung nach vorn zählt
+  float zc = linZ(uv);
+  if (aoAmt > 0.0) {
+    float occ = 0.0;
+    float rad = 0.012 / max(0.35, sqrt(zc) * 0.5);
+    float ang = hash(vUv * res) * 6.2831;
+    for (int i = 0; i < 8; i++) {
+      float a = ang + float(i) * 0.785398;
+      vec2 o = vec2(cos(a), sin(a)) * rad * (0.4 + 0.6 * fract(float(i) * 0.618));
+      float zs = linZ(uv + o);
+      float dz = zc - zs;
+      occ += smoothstep(0.03, 0.25, dz) * smoothstep(1.6, 0.4, dz);
+    }
+    col *= 1.0 - clamp(occ / 8.0 * aoAmt, 0.0, 0.75);
+  }
+  // Boden-/Nebeldunst: wabernde Dichte, nach hinten dichter, farbig wie Mondnebel
+  if (hazeAmt > 0.0) {
+    float wob = 0.85 + 0.15 * sin(time * 0.35 + uv.x * 5.0 + zc * 0.08);
+    float h = 1.0 - exp(-zc * 0.018 * hazeAmt * wob);
+    col = mix(col, hazeCol * 0.55, clamp(h, 0.0, 0.6) * smoothstep(1.0, 0.0, uv.y * 0.4 + 0.4));
+  }
 
   // Schärfen (Unsharp Mask) – wirkt wie eine knackige Kamera
   vec2 px = 1.0 / res;
@@ -81,12 +106,14 @@ export class Post {
   constructor(renderer) {
     this.r = renderer;
     this.rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: true, samples: 0 });
+    this.rt.depthTexture = new THREE.DepthTexture(4, 4); this.rt.depthTexture.type = THREE.UnsignedIntType;
     this.rt.texture.minFilter = THREE.LinearFilter; this.rt.texture.magFilter = THREE.LinearFilter;
     this.mat = new THREE.ShaderMaterial({
       uniforms: {
         tDiffuse: { value: this.rt.texture }, res: { value: new THREE.Vector2(1, 1) }, time: { value: 0 },
         grain: { value: 1 }, aberr: { value: 1 }, vignette: { value: 0.9 }, flash: { value: 0 }, vhs: { value: 0.6 },
         exposure: { value: 1.25 }, fade: { value: 1 }, blurAmt: { value: 0.18 }, tBloom: { value: null }, bloomAmt: { value: 0.9 },
+        tDepth: { value: this.rt.depthTexture }, aoAmt: { value: 1 }, hazeAmt: { value: 1 }, hazeCol: { value: new THREE.Color(0x2a3140) }, camNear: { value: 0.04 }, camFar: { value: 1500 },
       },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
       fragmentShader: frag,
@@ -115,11 +142,37 @@ export class Post {
     const s = G.settings.scale;
     const rw = Math.max(320, Math.floor(w * s)), rh = Math.max(180, Math.floor(h * s));
     this.rt.setSize(rw, rh);
+    if (G.camera) { this.mat.uniforms.camNear.value = G.camera.near; this.mat.uniforms.camFar.value = G.camera.far; }
     this.mat.uniforms.res.value.set(rw, rh);
     const bw = Math.max(64, rw >> 2), bh = Math.max(36, rh >> 2);
     this.bA.setSize(bw, bh); this.bB.setSize(bw, bh); this.bw = bw; this.bh = bh;
   }
+  // Grafikstufen: 0 niedrig, 1 mittel, 2 hoch, 3 ultra. Wirkt sofort (Raumschatten, Dunst, Bloom, Schatten)
+  static LEVELS = ['niedrig', 'mittel', 'hoch', 'ultra'];
+  applyGfx() {
+    const g = G.settings.gfx ?? 2, u = this.mat.uniforms;
+    u.aoAmt.value = [0, 0, 1, 1.5][g];
+    u.hazeAmt.value = [0, 1, 1.4, 1.8][g];
+    this.bloomPasses = [1, 1, 2, 2][g];
+    this.r.shadowMap.enabled = g >= 1;
+    this.r.shadowMap.needsUpdate = true;
+    if (G.world && G.world.setPoolSize) G.world.setPoolSize([5, 6, 8, 8][g]);
+    G.scene && G.scene.traverse((o) => { if (o.material) { const m = Array.isArray(o.material) ? o.material : [o.material]; m.forEach((x) => { x.needsUpdate = true; }); } });
+  }
   scare(k = 1) { this.scareT = Math.max(this.scareT, k); }
+  // Sichtweite folgt dem Nebel: was vollständig im Nebel liegt, wird gar nicht erst gezeichnet.
+  // In geschlossenen Räumen (G.viewCap) reicht ein kurzer Blick – die Außenwelt hinter den Wänden fällt weg.
+  fitView(scene, camera) {
+    const f = scene.fog, cap = G.viewCap || 1500;
+    const far = Math.min(cap, f && f.density > 0.002 ? Math.max(45, 3.4 / f.density) : 1500);
+    if (Math.abs(camera.far - far) > 0.25) { camera.far = far; camera.updateProjectionMatrix(); }
+    const u = this.mat.uniforms; u.camNear.value = camera.near; u.camFar.value = camera.far;
+    const sky = G.objects && G.objects.sky;
+    if (sky) {
+      sky.position.copy(camera.position); sky.scale.setScalar((camera.far * 0.85) / 900);
+      if (f && sky.material.uniforms.fogCol) sky.material.uniforms.fogCol.value.copy(f.color);
+    }
+  }
   render(scene, camera, dt) {
     const u = this.mat.uniforms;
     u.time.value = G.time;
@@ -129,11 +182,12 @@ export class Post {
     u.aberr.value = 1 + s * 7;
     u.vhs.value = 0.5 + s * 3 + (G.flags.vhsBoost || 0);
     u.flash.value = s > 0.85 ? (s - 0.85) * 1.2 : 0;
+    this.fitView(scene, camera);
     this.r.setRenderTarget(this.rt);
     this.r.render(scene, camera);
     // Bloom: hell extrahieren, zweimal weichzeichnen
     this.pass(this.thr, this.bA);
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < (this.bloomPasses || 2); i++) {
       this.blur.uniforms.tDiffuse.value = this.bA.texture; this.blur.uniforms.dir.value.set((1 + i) / this.bw, 0); this.pass(this.blur, this.bB);
       this.blur.uniforms.tDiffuse.value = this.bB.texture; this.blur.uniforms.dir.value.set(0, (1 + i) / this.bh); this.pass(this.blur, this.bA);
     }

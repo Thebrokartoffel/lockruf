@@ -5,6 +5,17 @@ import { gwait } from './timers.js';
 
 const $ = (s) => document.querySelector(s);
 
+// Gegenstände für die Taschen-Ansicht
+export const ITEMS = {
+  jacket: { i: '🧥', n: 'Jacke', d: 'Dünn. Für Halloween reicht es hoffentlich.' },
+  homeKeys: { i: '🔑', n: 'Hausschlüssel', d: 'Von Papas Nachttisch. Nicht klimpern lassen.' },
+  gatterKey: { i: '🗝', n: 'Kleiner Schlüssel', d: 'Lag unterm Blumentopf am Kiosk. Passt vielleicht ans Holzgatter.' },
+  lockpick: { i: '🪛', n: 'Dietrich-Set', d: 'Spanner und Haken aus der offenen Garage. Für ein einfaches Vorhängeschloss.' },
+  energy: { i: '🥫', n: 'Energy von Nessa', d: '„Für den Wald. Falls du rennen musst.“ Damit hältst du beim Rennen länger durch.' },
+  torKey: { i: '🗝', n: 'Schlüssel „TOR 3“', d: 'Aus dem Keller. Für das Tor am Wildzaun.' },
+  screwdriver: { i: '🪛', n: 'Schraubendreher', d: 'Kreuzschlitz, aus der Werkbank im Keller.' },
+};
+
 export class UI {
   constructor() {
     this.el = {
@@ -149,7 +160,19 @@ export class UI {
       if (G.phoneOpen) this.renderPhone();
     });
   }
+  // Gesprächsauswahl vor Ort (Tasten 1/2, Klick oder Tippen); läuft über die Antwort-Aktionen, damit sie mit aufgezeichnet wird
+  setChoice(options, who = '') {
+    const el = document.getElementById('choice');
+    return new Promise((res) => {
+      this.choice = { options, res };
+      el.innerHTML = (who ? `<div class="who">${who}</div>` : '') + options.map((o, i) => `<div class="opt" data-i="${i}">${G.touchOn ? '' : `<b>${K(i ? 'reply2' : 'reply1')}</b>`}${o}</div>`).join('');
+      for (const d of el.querySelectorAll('.opt')) d.addEventListener('click', () => { const c = 'Touch_reply' + (+d.dataset.i + 1); Input.keys.add(c); Input.pressed.add(c); setTimeout(() => Input.keys.delete(c), 90); });
+      el.classList.add('show');
+    });
+  }
+  clearChoice() { this.choice = null; const el = document.getElementById('choice'); el.classList.remove('show'); el.innerHTML = ''; }
   chooseReply(i) {
+    if (this.choice) { const c = this.choice; if (!c.options[i]) return false; this.clearChoice(); G.audio.ready && G.audio.click(); c.res(i); return true; }
     if (!this.reply || !G.phoneOpen || this.phoneTab !== 'chat') return false;
     const o = this.reply.options[i]; if (!o) return false;
     const r = this.reply; this.reply = null;
@@ -183,13 +206,19 @@ export class UI {
       return;
     }
     this.mapCanvas = null;
+    const tabsHtml = (on) => { const t = [['chat', 'Chat'], ...(G.phone.mapUnlocked ? [['map', 'Karte']] : []), ['inv', 'Taschen']]; return `<div class="tabs">${t.map(([k, n]) => `<span class="${k === on ? 'on' : ''}">${n}</span>`).join('')}<span>${G.touchOn ? '' : `[${K('app')}] weiter`}</span></div>`; };
+    if (this.phoneTab === 'inv') {
+      const items = [...G.inv].filter((k) => ITEMS[k]).map((k) => `<div class="it"><div class="ic">${ITEMS[k].i}</div><div><div class="nm">${ITEMS[k].n}</div><div class="ds">${ITEMS[k].d}</div></div></div>`).join('');
+      app.innerHTML = `<div class="head"><div class="av" style="background:#5a4a2a">▤</div><div><div class="name">Taschen</div><div class="sub">Jacke und Hose</div></div></div><div class="inv">${items || '<div class="empty">Nichts dabei.</div>'}</div>${tabsHtml('inv')}`;
+      return;
+    }
     const msgs = G.chat.slice(-9).map((m) => {
       if (m.from === 'day') return `<div class="day">${m.text}</div>`;
       return `<div class="msg ${m.from === 'me' ? 'me' : 'them'}">${m.text}</div>`;
     }).join('');
     let reply = '<div class="ph">Nachricht …</div>';
     if (this.reply) reply = this.reply.options.map((o, i) => `<div class="opt">${G.touchOn ? '' : `<b>[${K(i ? 'reply2' : 'reply1')}]</b>`}${o}</div>`).join('');
-    const tabs = G.phone.mapUnlocked ? `<div class="tabs"><span class="on">Chat</span><span>${G.touchOn ? '' : `[${K('app')}] `}Karte</span></div>` : '';
+    const tabs = tabsHtml('chat');
     app.innerHTML = `<div class="head"><div class="av">D</div><div><div class="name">Deniz</div><div class="sub">${G.phone.network ? 'online' : 'zuletzt online 02:12'}</div></div></div>
       <div class="chat">${msgs}</div><div class="reply">${reply}</div>${tabs}`;
   }
@@ -221,8 +250,9 @@ export class UI {
     ctx.fillStyle = '#3d8bff'; ctx.beginPath(); ctx.arc(W / 2, H / 2, 5, 0, 7); ctx.fill();
   }
   switchTab() {
-    if (!G.phoneOpen || !G.phone.mapUnlocked) return;
-    this.phoneTab = this.phoneTab === 'chat' ? 'map' : 'chat';
+    if (!G.phoneOpen) return;
+    const tabs = ['chat', ...(G.phone.mapUnlocked ? ['map'] : []), 'inv'];
+    this.phoneTab = tabs[(tabs.indexOf(this.phoneTab) + 1) % tabs.length];
     this.mapCanvas = null;
     this.renderPhone();
   }

@@ -66,7 +66,7 @@ export class Dev {
     else if (e.type === 'tp') { G.player.teleport(e.a[0], e.a[1], e.a[2], G.player.yaw, G.player.pitch); }
     else if (e.type === 'unstuck') G.story.unstuck();
     else if (e.type === 'use') { const it = G.world.interacts.find((i) => !(i.once && i.used) && i.enabled() && String(typeof i.text === 'function' ? i.text() : i.text).includes(e.a)); if (it) G.player.use(it); }
-    else if (e.type === 'reply') { G.ui.togglePhone(true); G.ui.chooseReply(e.a); }
+    else if (e.type === 'reply') { if (!G.ui.choice) G.ui.togglePhone(true); G.ui.chooseReply(e.a); }
     else if (e.type === 'look') { G.player.yaw = e.a[0]; G.player.pitch = e.a[1]; }
   }
 

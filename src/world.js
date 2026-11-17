@@ -263,6 +263,14 @@ export class World {
       scene.add(l); this.pool.push(l);
     }
   }
+  // Grafikstufe: weniger echte Lichter = weniger Rechenarbeit pro Pixel (Handy)
+  setPoolSize(n) {
+    if (!this.pool || this.pool.length === n) return false;
+    const scene = this.pool[0] && this.pool[0].parent;
+    while (this.pool.length > n) { const l = this.pool.pop(); l.parent && l.parent.remove(l); l.dispose && l.dispose(); }
+    while (this.pool.length < n && scene) { const l = new THREE.PointLight(0xffffff, 0, 10, 2); scene.add(l); this.pool.push(l); }
+    return true;
+  }
   addLamp(o) {
     const l = { color: 0xffc58a, intensity: 20, distance: 14, enabled: true, flicker: null, level: 1, ...o };
     if (Array.isArray(l.pos)) l.pos = new THREE.Vector3(...l.pos);
