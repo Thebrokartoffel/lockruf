@@ -157,6 +157,7 @@ export class Post {
     this.r.shadowMap.enabled = g >= 1;
     this.r.shadowMap.needsUpdate = true;
     if (G.world && G.world.setPoolSize) G.world.setPoolSize([5, 6, 8, 8][g]);
+    if (G.objects && G.objects.fogPuffs) G.objects.fogPuffs.setCount([16, 30, 46, 46][g]);   // weniger durchsichtige Schwaden = weniger Überzeichnen am Handy
     G.scene && G.scene.traverse((o) => { if (o.material) { const m = Array.isArray(o.material) ? o.material : [o.material]; m.forEach((x) => { x.needsUpdate = true; }); } });
   }
   scare(k = 1) { this.scareT = Math.max(this.scareT, k); }

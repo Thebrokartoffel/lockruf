@@ -1043,31 +1043,40 @@ function fogPuffs(scene) {
   ctx.fillStyle = g; ctx.fillRect(0, 0, 128, 128);
   const tex = new THREE.CanvasTexture(c);
   const mat = new THREE.MeshLambertMaterial({ map: tex, transparent: true, opacity: 0.13, depthWrite: false, color: 0x9aa0a8 });
-  const geo = new THREE.PlaneGeometry(1, 1);
+  // alle Schwaden in einem einzigen Draw-Call (InstancedMesh); wie viele, hängt von der Grafikstufe ab
+  const MAX = 46;
+  const mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mat, MAX);
+  mesh.renderOrder = 2; mesh.frustumCulled = false; mesh.count = MAX; mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  scene.add(mesh);
   const puffs = [];
-  for (let i = 0; i < 46; i++) { const m = new THREE.Mesh(geo, mat); m.renderOrder = 2; scene.add(m); puffs.push({ m, life: 0, sz: 0 }); }
-  const api = { enabled: true, mat };
-  G.world.updaters.push((dt, t) => {
+  for (let i = 0; i < MAX; i++) puffs.push({ p: new THREE.Vector3(0, -999, 0), v: new THREE.Vector3(), life: 0, sz: 0, age: 0 });
+  const api = { enabled: true, mat, mesh, setCount(n) { mesh.count = Math.max(0, Math.min(MAX, n)); } };
+  const M4 = new THREE.Matrix4(), S = new THREE.Vector3();
+  const up = (dt) => {
     const cam = G.camera; const p = G.player.p;
     const show = api.enabled && p.y > -1 && p.x < 400;
-    for (const f of puffs) {
-      f.m.visible = show;
-      if (!show) continue;
-      const dx = f.m.position.x - p.x, dz = f.m.position.z - p.z;
+    mesh.visible = show;
+    if (!show) return;
+    for (let i = 0; i < mesh.count; i++) {
+      const f = puffs[i];
+      const dx = f.p.x - p.x, dz = f.p.z - p.z;
       if (f.life <= 0 || dx * dx + dz * dz > 22 * 22) {
         const a = Math.random() * Math.PI * 2, r = 3 + Math.random() * 18;
         const x = p.x + Math.cos(a) * r, z = p.z + Math.sin(a) * r;
-        f.m.position.set(x, (G.terrain ? G.terrain.height(x, z) : 0) + 0.3 + Math.random() * 1.6, z);
+        f.p.set(x, (G.terrain ? G.terrain.height(x, z) : 0) + 0.3 + Math.random() * 1.6, z);
         f.sz = 2.5 + Math.random() * 4; f.life = 8 + Math.random() * 10; f.age = 0;
-        f.v = new THREE.Vector3((Math.random() - 0.5) * 0.2, 0, (Math.random() - 0.5) * 0.2);
+        f.v.set((Math.random() - 0.5) * 0.2, 0, (Math.random() - 0.5) * 0.2);
       }
       f.age += dt; f.life -= dt;
-      f.m.position.addScaledVector(f.v, dt);
+      f.p.addScaledVector(f.v, dt);
       const k = Math.min(1, f.age / 2, f.life / 2);
-      f.m.scale.setScalar(f.sz * (0.6 + k * 0.4));
-      f.m.quaternion.copy(cam.quaternion);
+      M4.compose(f.p, cam.quaternion, S.setScalar(f.sz * (0.6 + k * 0.4)));
+      mesh.setMatrixAt(i, M4);
     }
-  });
+    mesh.instanceMatrix.needsUpdate = true;
+  };
+  up.visual = true;   // reine Optik (Zufall), beim Rückspulen überspringen
+  G.world.updaters.push(up);
   return api;
 }
 
