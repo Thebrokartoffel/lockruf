@@ -13,6 +13,7 @@ export const KEY_LABELS = {
   use: 'Benutzen', flash: 'Taschenlampe', phone: 'Handy', reply1: 'Antwort 1', reply2: 'Antwort 2', app: 'Handy: Chat/Karte',
 };
 // Aktionen als Bits. confirm = Enter/Escape (Notizen schließen, Erzählung überspringen)
+const IS_APP = typeof navigator !== 'undefined' && /Electron/i.test(navigator.userAgent);
 export const ACTIONS = ['forward', 'back', 'left', 'right', 'sprint', 'crouch', 'jump', 'use', 'flash', 'phone', 'reply1', 'reply2', 'app', 'confirm'];
 const BIT = Object.fromEntries(ACTIONS.map((a, i) => [a, 1 << i]));
 const ARROWS = { forward: 'ArrowUp', back: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' };
@@ -126,6 +127,8 @@ export const Input = {
     // Rennen: beide Shift-Tasten, wenn auf Shift gelegt
     if (a === 'sprint' && (c === 'ShiftLeft' || c === 'ShiftRight')) out.push(c === 'ShiftLeft' ? 'ShiftRight' : 'ShiftLeft');
     if (ARROWS[a]) out.push(ARROWS[a]);
+    // Ducken zusätzlich mit Strg (viele spielen so); im Browser nicht, dort schließt Strg+W den Tab
+    if (a === 'crouch' && IS_APP && c !== 'ControlLeft' && c !== 'ControlRight') out.push('ControlLeft', 'ControlRight');
     if (a === 'confirm') out.push('Enter', 'Escape', 'NumpadEnter', 'Touch_use');
     out.push('Touch_' + a);        // Bildschirm-Buttons am Handy
     return out;
