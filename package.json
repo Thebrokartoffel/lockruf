@@ -1,0 +1,19 @@
+{
+  "name": "lockruf",
+  "version": "1.0.0",
+  "description": "LOCKRUF – 3D-Horrorspiel im Stil von Fears to Fathom (Three.js), Browser, Handy und Windows-App",
+  "main": "src/main.js",
+  "scripts": {
+    "dev": "node build.mjs",
+    "build": "node build.mjs --min",
+    "pages": "node build.mjs --pages",
+    "app": "node build.mjs --min && node app/prepare.mjs && cd app && npm install && npx electron .",
+    "app:pack": "node build.mjs --min && node app/prepare.mjs && cd app && npm install && npx @electron/packager . LOCKRUF --platform=win32 --arch=x64 --out=../release --overwrite",
+    "guide": "python tools/guide.py LOCKRUF_Guide.pdf"
+  },
+  "dependencies": {
+    "esbuild": "^0.28.2",
+    "three": "^0.187.0"
+  },
+  "private": true
+}

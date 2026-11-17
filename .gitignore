@@ -1,0 +1,9 @@
+node_modules/
+dist/
+release/
+app/node_modules/
+app/game/
+tests/out/
+*.log
+.DS_Store
+Thumbs.db

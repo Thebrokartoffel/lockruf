@@ -1,0 +1,10 @@
+{
+  "name": "lockruf",
+  "productName": "LOCKRUF",
+  "version": "1.0.0",
+  "main": "main.cjs",
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "electron": "^45.3.3"
+  }
+}

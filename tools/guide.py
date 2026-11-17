@@ -1,0 +1,30 @@
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, ListFlowable, ListItem, KeepTogether
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.colors import HexColor
+st=getSampleStyleSheet()
+H=ParagraphStyle('h',parent=st['Heading2'],textColor=HexColor('#8a1a12'),spaceBefore=10,keepWithNext=1)
+B=ParagraphStyle('b',parent=st['BodyText'],fontSize=10.5,leading=14)
+T=ParagraphStyle('t',parent=st['Title'],fontSize=26,leading=32,spaceAfter=14)
+data=[
+("Prolog – Der Keller",["Luke über dir ist zu. Geh die Treppe hoch, E an der Luke (geht nicht auf).","Einfach warten, Licht geht aus, dann Erzählung."]),
+("1 – Zuhause (01:43)",["Handy auf dem Schreibtisch nehmen (E). Mit 1 / 2 antworten (Tab = Handy auf/zu), alle Nachrichten abwarten.","Jacke vom Stuhl nehmen.","Obergeschoss: Durch die Tür in den Flur. Nicht rennen, nicht springen. Geduckt (C) ist es am leisesten. Vor der Elterntür knarzen die Dielen.","Unten links zeigt LAUT, wie viel Lärm du machst. Hört das Schnarchen auf oder geht Licht unter der Tür an: weg von der Tür, in dein Zimmer oder die Treppe runter.","Treppe am Ende des Flurs rechts nach unten. Stufen 3, 7 und 11 knarzen, langsam gehen.","Unten: Haustür ist abgeschlossen. Dein Schlüssel liegt in der Küche (geradeaus durch den Flur, Arbeitsplatte rechts beim Kühlschrank).","Schlüssel nehmen: er klirrt, Papa wacht auf und kommt runter.","Sofort verstecken: Abstellkammer unter der Treppe (Lamellentür im Flur, E) oder geduckt hinter dem Sofa im Wohnzimmer. Taschenlampe aus.","Warten, bis er wieder oben ist. Dann E (rauskommen), an der Haustür Kette lösen und aufschließen (beides E halten).","Erwischt? Du startest am letzten Checkpoint (Obergeschoss oder Erdgeschoss)."]),
+("2 – Wendelsweg & Goetheturm",["Straße geradeaus Richtung Wald (am Ende Schild 'Waldspielpark').","Zum Turm (Bauzaun). Optional: Dose auf der Bank ansehen, Schild am Zaun lesen.","Auf Nachricht antworten (Tab, 1/2).","Den Kiesweg im Süden hinter dem Spielplatz nehmen: Hügelschneise."]),
+("3 – Hügelschneise",["F = Taschenlampe. Weg geradeaus.","Bei 'da steht jemand hinter dir': umdrehen.","Antworten, weiter bis zur Absperrung.","Links (westlich) vor der Absperrung: Lücke zwischen zwei Stämmen, geduckt durch.","Äste wegräumen: E halten."]),
+("4 – Abseits",["Rot-weißem Flatterband folgen.","Nach dem Schrei: Antwort senden (1).","Beim zweiten Schrei rennen: Du stürzt. Handy am Leuchten am Boden suchen, E.","Zaun erreichen, Tor ist zu. Am Zaun entlang nach Süden bis zur Hütte."]),
+("5 – Hütte & Keller",["Hüttentür (Ostseite) öffnen. Mütze auf dem Tisch ansehen.","Luke im Boden: Treppe runter.","Steckdosenleiste auf der Werkbank: Handy anschließen.","Schlüssel 'TOR 3' am Schlüsselbrett (Südwand) nehmen.","Gerät 'RUF 2' auf der Werkbank abspielen. Dann wirst du eingesperrt.","Lüftung (Westwand) ansehen.","Sicherungskasten (Südwand, rechts): Schalter 2 = Lüftung aus.","Schublade der Werkbank öffnen, Schraubendreher nehmen.","Gitter abschrauben (E halten), dann Lüfter rausziehen.","Handy von der Werkbank wieder nehmen!","In den Schacht (du kriechst automatisch), am Ende: Hochklettern, Gitter aufdrücken (E halten)."]),
+("6 – Flucht",["Nach dem Ast: sofort SPRINTEN (Shift links oder rechts), dem Trampelpfad am Zaun entlang nach Norden.","Über den Ast und den liegenden Stamm springen (Leertaste).","Tor aufschließen: E halten. Durch, das Tor fällt zu.","Er hat einen eigenen Schlüssel. Weiter! Bach: mit Anlauf (Shift) Leertaste springen.","Erwischt er dich nach dem Tor, startest du am Tor neu."]),
+("7 – Kleingärten",["Gasse nach Westen: an der Tonne vorbei, an den Paletten vorbei, über den Schutt springen.","Weiter durch die Gärten. Am Flutlicht bleibt er stehen. Dann bis zur Laterne."]),
+("8 – Ende",["Zur Haustür gehen, Deniz zuhören."]),
+("Godmode (Taste +, am Handy: Menü-Button → Godmode-Panel)",["+ öffnet das Panel. Unverwundbar, Gegner ignorieren, Noclip, Fliegen (V), Kollisionen anzeigen (B).","Zeit: Pause (P), Einzelbild (O), Zeitfaktor (T), 5 s zurück (R). Im Panel auch 10/30 s und Story-Marker.","Story-Marker: springt kurz vor ein Ereignis zurück, um es nochmal zu erleben.","Ereignisse, Kapitel, Checkpoints und Teleports per Klick. Spielstände bleiben unverändert."]),
+]
+s=[Paragraph("LOCKRUF – Lösungsweg",T),
+   Paragraph("PC: LOCKRUF starten.bat. Steuerung (Standard, unter Esc → Steuerung frei belegbar): WASD gehen, Maus schauen, Shift rennen, C ducken, Leertaste springen, E benutzen (manchmal halten), F Taschenlampe, Tab Handy, 1/2 antworten, Q Karte, Esc Pause/Kapitel wählen, F11 Vollbild.",B),
+   Spacer(1,6),
+   Paragraph("Handy und Tablet: im Browser öffnen (thebrokartoffel.github.io/lockruf), quer halten. Am besten über das Browser-Menü „Zum Startbildschirm hinzufügen“, dann läuft es im Vollbild.",B),
+   Paragraph("Touch-Steuerung: linken Daumen irgendwo links aufsetzen = Stick, ganz nach vorne schieben = rennen. Rechts wischen = umsehen. In den Schritten unten heißt am Handy: E = Benutzen-Button mit der Hand (halten, wo nötig), Tab = Handy-Button, 1/2 = Antwort direkt auf dem Handy antippen, C = Ducken (an/aus), Leertaste = Springen, F = Licht, Q = Karte-Button, Esc = Menü-Button oben links (dort auch das Godmode-Panel). Ruckelt es, senkt das Spiel die Auflösung selbst.",B)]
+for h,items in data:
+    s.append(KeepTogether([Paragraph(h,H), ListFlowable([ListItem(Paragraph(i,B)) for i in items],bulletType='1')]))
+s.append(Spacer(1,10)); s.append(Paragraph("Feststecken? Esc (am Handy der Menü-Button) → Ich stecke fest. Oder → Kapitel wählen. Mikrofon (optional): Einstellungen.",B))
+import sys
+SimpleDocTemplate(sys.argv[1] if len(sys.argv) > 1 else 'LOCKRUF_Guide.pdf',pagesize=A4,topMargin=40,bottomMargin=40).build(s)
