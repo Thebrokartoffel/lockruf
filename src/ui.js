@@ -102,6 +102,7 @@ export class UI {
   }
   note(text) {
     this.el.paper.textContent = text;
+    this.el.note.querySelector('.close').textContent = G.touchOn ? 'Irgendwo tippen zum Schließen' : `[${K('use')}] schließen`;
     this.el.note.classList.add('show');
     G.noteOpen = true;
     return new Promise((res) => { this._noteRes = res; });
@@ -136,7 +137,7 @@ export class UI {
     const n = this.el.notif;
     n.querySelector('.from').innerHTML = `${from} <span>jetzt</span>`;
     n.querySelector('.body').textContent = text;
-    n.querySelector('.hint').textContent = `[${K('phone')}] Handy`;
+    n.querySelector('.hint').innerHTML = G.touchOn ? 'Handy-Button antippen' : `[${K('phone')}] Handy`;
     n.classList.add('show');
     clearTimeout(this.notifTimer);
     this.notifTimer = setTimeout(() => n.classList.remove('show'), 4200);
@@ -165,6 +166,7 @@ export class UI {
     if (open && !G.flags.hasPhone) return;
     G.phoneOpen = open;
     this.el.phone.classList.toggle('open', open);
+    document.body.classList.toggle('phoneopen', open);
     if (open) { this.hideNotif(); this.renderPhone(); G.unread = 0; }
   }
   renderPhone() {
@@ -186,8 +188,8 @@ export class UI {
       return `<div class="msg ${m.from === 'me' ? 'me' : 'them'}">${m.text}</div>`;
     }).join('');
     let reply = '<div class="ph">Nachricht …</div>';
-    if (this.reply) reply = this.reply.options.map((o, i) => `<div class="opt"><b>[${K(i ? 'reply2' : 'reply1')}]</b>${o}</div>`).join('');
-    const tabs = G.phone.mapUnlocked ? `<div class="tabs"><span class="on">Chat</span><span>[${K('app')}] Karte</span></div>` : '';
+    if (this.reply) reply = this.reply.options.map((o, i) => `<div class="opt">${G.touchOn ? '' : `<b>[${K(i ? 'reply2' : 'reply1')}]</b>`}${o}</div>`).join('');
+    const tabs = G.phone.mapUnlocked ? `<div class="tabs"><span class="on">Chat</span><span>${G.touchOn ? '' : `[${K('app')}] `}Karte</span></div>` : '';
     app.innerHTML = `<div class="head"><div class="av">D</div><div><div class="name">Deniz</div><div class="sub">${G.phone.network ? 'online' : 'zuletzt online 02:12'}</div></div></div>
       <div class="chat">${msgs}</div><div class="reply">${reply}</div>${tabs}`;
   }
@@ -258,3 +260,18 @@ export class UI {
     }
   }
 }
+
+// Handy-UI an den Bildschirm anpassen: Höhe passt immer ganz ins Bild, rechts Platz für die Touch-Buttons.
+// zoom skaliert in Chromium auch right/bottom mit, deshalb werden die Abstände durch z geteilt.
+export function layoutPhone() {
+  const w = innerWidth, h = innerHeight, portrait = h > w;
+  const z = Math.min(1, Math.max(0.4, (h - 26) / 552));
+  const rightPx = portrait ? (w - 276 * z) / 2 : G.touchOn ? 104 : w * 0.06;
+  const left = w - rightPx - 276 * z;
+  const r = document.documentElement.style;
+  r.setProperty('--phz', z.toFixed(3));
+  r.setProperty('--phr', (rightPx / z).toFixed(1) + 'px');
+  r.setProperty('--phl', Math.max(0, left).toFixed(0) + 'px');
+  r.setProperty('--rpr', Math.round(rightPx + 276 * z + 14) + 'px');
+}
+

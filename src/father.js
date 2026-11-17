@@ -79,6 +79,26 @@ export class Father {
     this.man.stand();
   }
 
+  // nach dem Schlüssel: er steht auf, schaut in Leons Zimmer und ins Bad, geht runter zur Haustür, trinkt was, legt sich wieder hin
+  searchPatrol() {
+    if (this.mode === 'off') return;
+    const R = this.H.route;
+    this.mode = 'patrol';
+    this.alert = 1;
+    this.route = [
+      { p: R.bedside }, { p: R.doorIn, door: 1 }, { p: R.doorOut, pause: 1.4, look: R.lookHall, say: 'Wer ist da?' }, { p: R.hall, lamp: 'hall' },
+      { p: R.leonDoor, pause: 2.6, look: R.leonLook, leonCheck: true }, { p: R.hall, pause: 1.2, look: R.bathLook },
+      { p: R.landing }, { p: R.stairTop }, { p: R.stairBot },
+      { p: R.diele, pause: 1.0, look: R.lookLiving }, { p: R.frontDoor, pause: 2.2, look: R.lookFront, say: 'Hm. Zu.' },
+      { p: R.diele }, { p: R.corrN, closet: true }, { p: R.kitchenDoor, lamp: 'kitchen' },
+      { p: R.fridge, pause: 4.0, fridge: true, look: R.fridgeLook },
+      { p: R.kitchenDoor, lampOff: 'kitchen' }, { p: R.corrN }, { p: R.diele, pause: 1.6, look: R.lookLiving, say: 'Ich hör doch was …' },
+      { p: R.stairBot }, { p: R.stairTop }, { p: R.landing }, { p: R.hall, lampOff: 'hall' }, { p: R.doorIn, door: 0 }, { p: R.bedside, end: true },
+    ];
+    this.ri = 0;
+    this.beginWalk();
+  }
+
   // Tür auf, kurz schauen, wieder hinlegen
   check() {
     const R = this.H.route;
@@ -110,6 +130,13 @@ export class Father {
       if (this.stage === 0 && !this.snoring && G.time > (this.snoreAt || 0)) { this.snoring = true; A.setLoop('snore', 0.7, 2); }
       // Schatten der Füße unter der Tür
       if (this.stage >= 3) { H.feet.visible = true; H.feet.position.z = H.feetZ + Math.sin(G.time * 0.9) * 0.25; }
+      // Licht an und Leon steht im Schlafzimmer: er sieht ihn
+      const pl = G.player;
+      if (this.stage >= 3 && !pl.hidden && pl.p.y > 2 && pl.p.x < 501.9 && pl.p.z > 4.4 && pl.p.z < 9.7 && !(G.dev && G.dev.ignore)) {
+        this.sus += dt * 1.6;
+        if (this.sus > 0.3 && !this._huh) { this._huh = true; this.mumble('…Leon?!'); }
+        if (this.sus >= 1 && !this.caught) { this.caught = true; this.pos.set(...this.H.route.bedside); this.man.root.visible = true; this.H.lump.visible = false; this.man.stand(); if (G.story && G.story.caughtByDad) G.story.caughtByDad(this); }
+      }
       return;
     }
     // unterwegs
@@ -167,7 +194,12 @@ export class Father {
       this.lookYaw = wp.look ? yawTo(wp.look[0] - this.pos.x, wp.look[2] - this.pos.z) : null;
       this.pause = wp.pause || (wp.door !== undefined ? 1.1 : 0);
       // auf dem Rückweg bleibt er vor der Abstellkammer stehen, wenn Leon drin ist
-      if (wp.closet && G.player.hidden) { const c = H.route.closet; this.lookYaw = yawTo(c[0] - this.pos.x, c[2] - this.pos.z); this.pause = 2.6; G.audio.heartbeat(true, 2.6); if (G.story) G.story.mark('Papa vor der Kammer'); }
+      if (wp.leonCheck) {
+        const spot = G.story && G.story._hideSpot;
+        this.mumble(G.player.hidden && spot && spot.id === 'bett' ? '…Schläft.' : 'Leon …?');
+        if (G.story) G.story.mark('Papa schaut in Leons Zimmer');
+      }
+      if (wp.closet && G.player.hidden && G.story && G.story._hideSpot && G.story._hideSpot.id === 'kammer') { const c = H.route.closet; this.lookYaw = yawTo(c[0] - this.pos.x, c[2] - this.pos.z); this.pause = 2.6; G.audio.heartbeat(true, 2.6); if (G.story) G.story.mark('Papa vor der Kammer'); }
       if (wp.end) { this.backToBed(); return; }
       this.ri = Math.min(this.route.length - 1, this.ri + 1);
       if (wp.fridge) { G.audio.burst({ pos: this.pos, f: 300, q: 1, d: 0.3, peak: 0.3 }); }

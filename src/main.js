@@ -4,7 +4,7 @@ import { G, loadSettings, saveSettings, loadProgress, isTouchDevice } from './st
 import { World } from './world.js';
 import { Player } from './player.js';
 import { Post } from './post.js';
-import { UI } from './ui.js';
+import { UI, layoutPhone } from './ui.js';
 import { AudioEngine } from './audio.js';
 import { Input, DEFAULT_KEYS, KEY_LABELS, keyName } from './input.js';
 import { Story, CHAPTERS, Abort } from './story.js';
@@ -70,6 +70,12 @@ function boot() {
   G.touch = new Touch();
   G.touch.enable(G.settings.touch === 'on' || (G.settings.touch !== 'off' && isTouchDevice()));
   G.pauseGame = () => { if (G.started && !G.paused) pause(); };
+  G.layoutPhone = layoutPhone; layoutPhone();
+  // Zettel mit Maus oder Finger schließen: läuft über die virtuelle Benutzen-Taste (wird mit aufgezeichnet)
+  document.getElementById('note').addEventListener('click', () => {
+    if (!G.noteOpen || G.touchOn) return;
+    Input.keys.add('Touch_use'); Input.pressed.add('Touch_use'); setTimeout(() => Input.keys.delete('Touch_use'), 90);
+  });
   // Einstellung "automatisch": sobald wirklich ein Finger den Bildschirm berührt, Touch einschalten
   // (z. B. Tablet mit Tastatur-Cover, das sich als Maus-Gerät meldet)
   addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch' && !G.touchOn && G.settings.touch !== 'off') G.touch.enable(true); }, true);
@@ -92,6 +98,7 @@ function boot() {
     renderer.setSize(innerWidth, innerHeight);
     camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
     G.post.resize(innerWidth, innerHeight);
+    layoutPhone();
   });
   document.getElementById('loading').style.display = 'none';
   G.ui.el.fade.style.opacity = 0;

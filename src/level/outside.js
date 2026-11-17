@@ -7,6 +7,17 @@ import { Terrain, stripGeo } from './terrain.js';
 import { beam, prismGeo, bench, trashBin, car, haloSprite, emissive, signMesh, pumpkin, graveLight } from './props.js';
 import { rng, segDist, clamp } from '../util.js';
 
+// x-Mitte eines Wegs (Polylinie, nach z sortiert) an der Stelle z
+export function pathX(pts, z) {
+  if (z <= pts[0][1]) return pts[0][0];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [ax, az] = pts[i], [bx, bz] = pts[i + 1];
+    if (z >= az && z <= bz) return ax + (bx - ax) * ((z - az) / (bz - az || 1));
+  }
+  return pts[pts.length - 1][0];
+}
+export const schX = (z) => pathX(P.schneise, z);
+
 // Wichtige Positionen (für die Story)
 export const P = {
   homeDoor: new THREE.Vector3(-7.97, 0, -131),
@@ -15,6 +26,13 @@ export const P = {
   canBench: [-3, -55],
   tower: [13, -50],
   schneiseStart: [0, -31],
+  // Kiesweg der Hügelschneise: geschwungen, mit Abzweigungen (Sackgassen)
+  schneise: [[0, -31], [0, -23], [-2.6, -13], [-3.4, -3], [-0.6, 7], [3, 16], [3.8, 24.5], [1.2, 33], [-1.6, 41], [-0.4, 48], [0, 52.5], [0, 59.6]],
+  branches: [
+    [[-2.6, -13], [-8.5, -16.5], [-14, -15.2], [-19.5, -18.6]],
+    [[3.8, 24.5], [7.0, 27.2], [9.4, 28.4]],
+    [[-1.6, 41], [-7.5, 43.8], [-11.6, 47.2]],
+  ],
   barrier: [0, 57.5],
   squeeze: [-3.3, 54.4],
   pile: [-7.0, 54.6],
@@ -173,10 +191,16 @@ export function buildOutside(scene, world, M) {
   // HÜGELSCHNEISE (x -2.5..2.5, z -30..62)
   // =====================================================================
   world.tag = 'Hügelschneise';
-  const sch = new THREE.Mesh(stripGeo(terrain, [[0, -30], [0, 63]], 5.2, 0.5, 0.09, 3), M.gravel);
+  const sch = new THREE.Mesh(stripGeo(terrain, [...P.schneise.slice(0, -1), [0, 63]], 5.2, 0.5, 0.09, 3), M.gravel);
   sch.receiveShadow = true; scene.add(sch);
-  world.addRegionBox(-2.6, 2.6, -31, 60.9);
-  world.addSurface(-2.6, 2.6, -31, 64, 'gravel');
+  world.addRegionPath(P.schneise, 2.6, { label: 'Hügelschneise' });
+  for (let i = 0; i < P.schneise.length - 1; i++) {
+    const [ax, az] = P.schneise[i], [bx, bz] = P.schneise[i + 1];
+    world.addSurface(Math.min(ax, bx) - 2.8, Math.max(ax, bx) + 2.8, az - 0.5, bz + 0.5, 'gravel');
+  }
+  world.addSurface(-2.8, 2.8, 52, 64, 'gravel');
+  // Abzweigungen: schmale Trampelpfade, die im Nichts enden
+  P.branches.forEach((b, i) => world.addRegionPath(b, 1.25, { label: 'Abzweigung ' + (i + 1) }));
   // Wegweiser
   {
     B.add(cylGeo(0.07, 0.07, 2.4, 8), M.wood, 2.9, H(2.9, -27) + 1.2, -27); world.addCircle(2.9, -27, 0.12);
@@ -185,9 +209,9 @@ export function buildOutside(scene, world, M) {
     const b = signMesh([{ t: 'Maunzenweiher 1,8 km', font: 'bold 44px Georgia' }], 1.0, 0.22, { w: 512, h: 112, bg: '#e8e0c8', fg: '#2a2a1a', border: '#3a2a1a' });
     b.position.set(2.9, H(2.9, -27) + 1.75, -27); b.rotation.y = 0.4; scene.add(b);
   }
-  bench(B, M, 3.3, H(3.3, 12), 12, -Math.PI / 2);
+  { const bx = schX(12) + 3.3; bench(B, M, bx, H(bx, 12), 12, -Math.PI / 2); }
   // Hochsitz
-  hochsitz(B, M, 7.5, H(7.5, 31), 31);
+  hochsitz(B, M, 11.2, H(11.2, 31), 31);
   // Absperrung + umgestürzter Baum
   world.tag = 'Sperrung Forstarbeiten';
   {
@@ -219,6 +243,26 @@ export function buildOutside(scene, world, M) {
   }
   // Ast-Haufen (wegräumen)
   G.objects.pile = branchPile(scene, world, P.pile[0], H(...P.pile), P.pile[1]);
+  // links und rechts vom Ast-Haufen dichtes Gestrüpp: durch kommt man nur, wenn die Äste weg sind
+  world.addBox(-7.6, -6.4, 50.8, 53.25, -50, 50, { label: 'Gestrüpp am Durchschlupf' });
+  world.addBox(-7.6, -6.4, 55.95, 58.6, -50, 50, { label: 'Gestrüpp am Durchschlupf' });
+  const pileBrush = [[-7.0, 52.2], [-6.9, 51.1], [-7.1, 57.1], [-6.9, 58.1], [-7.4, 53.0], [-7.3, 56.3]];
+
+  // Sackgassen am Ende der Abzweigungen
+  {
+    const [ex, ez] = P.branches[0][P.branches[0].length - 1];
+    B.add(cylGeo(0.3, 0.38, 5.4, 9, 1.2), M.barkOak, ex - 0.9, H(ex, ez) + 0.32, ez - 0.7, 0, 0.55, Math.PI / 2);
+    world.addOBB(ex - 0.9, ez - 0.7, 2.7, 0.38, -0.55, -50, H(ex, ez) + 0.75, { label: 'Umgestürzter Baum (Sackgasse)' });
+    B.add(cylGeo(0.05, 0.05, 1.5, 6), M.wood, ex + 0.9, H(ex + 0.9, ez + 0.6) + 0.75, ez + 0.6);
+    const ps = signMesh([{ t: 'PRIVATWEG', font: 'bold 46px Georgia' }, { t: 'Betreten verboten', font: '30px Georgia' }], 0.8, 0.36, { w: 384, h: 172, bg: '#d8d0b8', fg: '#2a1a10', border: '#3a2a1a' });
+    ps.position.set(ex + 0.9, H(ex + 0.9, ez + 0.6) + 1.35, ez + 0.6); ps.rotation.y = 0.9; scene.add(ps);
+  }
+  {
+    const [ex, ez] = P.branches[2][P.branches[2].length - 1];
+    const gy = H(ex, ez);
+    for (let r = 0; r < 3; r++) for (let i = 0; i < 4 - r; i++) B.add(cylGeo(0.26, 0.28, 4.2, 9, 1.2), M.barkOak, ex - 1.0 + i * 0.52 + r * 0.26, gy + 0.27 + r * 0.46, ez + 0.4, Math.PI / 2, 0.75, 0);
+    world.addOBB(ex - 0.2, ez + 0.4, 1.3, 2.2, -0.75, -50, gy + 1.5, { label: 'Holzpolter (Sackgasse)' });
+  }
 
   // =====================================================================
   // ABSEITS: Korridor durch den dichten Wald
@@ -240,7 +284,7 @@ export function buildOutside(scene, world, M) {
     cx.putImageData(img, 0, 0);
     const am = new THREE.CanvasTexture(c); am.wrapS = am.wrapT = THREE.RepeatWrapping;
     const tm = lam('trodden', { map: T.mulchTex(), alphaMap: am, alphaTest: 0.5, color: new THREE.Color(2.0, 1.8, 1.55) });
-    for (const pts of [[[-2.4, 54.4], [-7.8, 54.6], ...P.corridor.slice(1)], P.escape]) {
+    for (const pts of [[[-2.4, 54.4], [-7.8, 54.6], ...P.corridor.slice(1)], P.escape, ...P.branches]) {
       const m = new THREE.Mesh(stripGeo(terrain, pts, 1.6, 1, 0.05, 1.6), tm); m.receiveShadow = true; scene.add(m);
     }
   }
@@ -272,7 +316,8 @@ export function buildOutside(scene, world, M) {
   const F = new Forest(V, 36);
   const areas = [
     { t: 'box', minX: -28, maxX: 28, minZ: -76, maxZ: -29 },
-    { t: 'box', minX: -2.6, maxX: 2.6, minZ: -31, maxZ: 64 },
+    { t: 'path', pts: [...P.schneise.slice(0, -1), [0, 64]], r: 2.6 },
+    ...P.branches.map((b) => ({ t: 'path', pts: b, r: 1.25 })),
     { t: 'path', pts: P.corridor, r: 3 },
     { t: 'path', pts: P.escape, r: 3 },
     { t: 'path', pts: [[-2.2, 54.4], [-7.8, 54.6]], r: 1.1 },
@@ -301,7 +346,25 @@ export function buildOutside(scene, world, M) {
   for (const [x, z] of markerTrees) { F.add(V.length - 1, x, H(x, z), z, 1, 0.4); world.addCircle(x, z, 0.62); occupied.push([x, z, 1.2]); }
   for (const [x, z] of G.squeezeTrees) { F.add(0, x, H(x, z), z, 1.2, R() * 6); world.addCircle(x, z, 0.55); occupied.push([x, z, 1.0]); }
   for (const [x, z] of parkTrees) { F.add((R() * 3) | 0, x, H(x, z), z, 1.25, R() * 6); world.addCircle(x, z, 0.55); occupied.push([x, z, 1.5]); }
-  occupied.push([7.5, 31, 3.2]);
+  occupied.push([11.2, 31, 3.2]);
+  // Fluchtweg am Zaun: mehr Hindernisse (drunter ducken, Slalom, springen)
+  {
+    // Baum, der quer in Kopfhöhe hängt: nur geduckt kommt man drunter durch
+    const zc = 126.5; let gmax = -Infinity;
+    for (let x = -79; x <= -69; x += 2.5) gmax = Math.max(gmax, H(x, zc));
+    B.add(cylGeo(0.19, 0.24, 10.6, 9, 1.2), M.barkOak, -74.0, gmax + 1.43, zc, 0, 0.04, Math.PI / 2);
+    for (const x of [-79.6, -68.5]) { B.add(cylGeo(0.34, 0.42, 2.4, 9, 1.2), M.barkOak, x, H(x, zc) + 1.0, zc); world.addCircle(x, zc, 0.42); occupied.push([x, zc, 1.0]); }
+    for (let i = 0; i < 5; i++) B.add(cylGeo(0.03, 0.05, 1.3, 5, 1), M.barkOak, -77.5 + i * 1.7, gmax + 1.2, zc + (i % 2 ? 0.2 : -0.2), (i % 2 ? 0.5 : -0.5), 0, 0.2);
+    world.addOBB(-74.0, zc, 5.3, 0.26, -0.04, gmax + 1.2, gmax + 1.7, { label: 'Hängender Baum (ducken)' });
+    G.duckTrunk = [-74.0, zc];
+    // zwei dicke tote Stämme: Slalom
+    for (const [x, z] of [[-76.9, 117.6], [-73.8, 116.0]]) { B.add(cylGeo(0.34, 0.44, 7, 9, 1.2), M.barkOak, x, H(x, z) + 3.4, z); world.addCircle(x, z, 0.44); occupied.push([x, z, 1.1]); }
+    // zweiter Stamm quer vor dem Tor (springen)
+    const lz = 110.6, ly = H(-75.4, lz);
+    B.add(cylGeo(0.2, 0.24, 6.6, 9, 1.2), M.barkOak, -75.4, ly + 0.2, lz, 0, -0.05, Math.PI / 2);
+    world.addOBB(-75.4, lz, 3.3, 0.24, 0.05, -50, ly + 0.42, { label: 'Stamm vor dem Tor (springen)' });
+    occupied.push([-75.4, lz, 1.0]);
+  }
   // Baum mit dem Ast, der bei der Flucht runterkracht
   F.add(1, -69.6, H(-69.6, 136.4), 136.4, 1.15, 0.7); world.addCircle(-69.6, 136.4, 0.52); occupied.push([-69.6, 136.4, 1.2]);
   G.branchTree = [-69.6, 136.4];
@@ -350,6 +413,30 @@ export function buildOutside(scene, world, M) {
   const bushes = new Scatter(crossGeo(2.2, 1.6, 3), M.leafBush);
   const ferns = new Scatter(crossGeo(1.2, 0.8, 3), M.fern, 36, false);
   const grass = new Scatter(crossGeo(1.0, 0.45, 2), M.grass, 36, false);
+  // Dichter Rand entlang aller begehbaren Wege: keine Lücke, die nach „da geht's weiter“ aussieht
+  {
+    const along = (pts, r) => {
+      for (let i = 0; i < pts.length - 1; i++) {
+        const [ax, az] = pts[i], [bx, bz] = pts[i + 1]; const Lg = Math.hypot(bx - ax, bz - az); if (Lg < 0.01) continue;
+        const nx = -(bz - az) / Lg, nz = (bx - ax) / Lg;
+        for (let t = 0; t < Lg; t += 0.9) {
+          for (const side of [-1, 1]) for (const row of [0, 1]) {
+            if (row && R() < 0.45) continue;
+            const off = r + (row ? 1.7 + R() * 0.8 : 0.85 + R() * 0.6);
+            const x = ax + (bx - ax) * t / Lg + nx * off * side + (R() - 0.5) * 0.4, z = az + (bz - az) * t / Lg + nz * off * side + (R() - 0.5) * 0.4;
+            if (sd(x, z) < 0.45 || x < -78.7) continue;   // Kreuzung oder anderer Weg bleibt frei, jenseits des Zauns nichts
+            bushes.add(x, H(x, z) - 0.05, z, 1.0 + R() * 0.55, R() * 6);
+          }
+        }
+      }
+    };
+    along(P.schneise, 2.6); P.branches.forEach((b) => along(b, 1.25));
+    along(P.corridor, 3.0); along(P.escape, 3.0);
+    along([[-27, -72.5], [-27, -29.5], [27, -29.5], [27, -72.5]], 0);
+    const [cx, cz] = P.clearing;
+    for (let a = 0; a < Math.PI * 2; a += 0.09) { const rr = 9.5 + 0.9 + R() * 0.8; const x = cx + Math.cos(a) * rr, z = cz + Math.sin(a) * rr; if (sd(x, z) > 0.45) bushes.add(x, H(x, z) - 0.05, z, 1.0 + R() * 0.5, R() * 6); }
+    for (const [x, z] of pileBrush) bushes.add(x, H(x, z) - 0.05, z, 1.3, R() * 6);
+  }
   for (let i = 0; i < 26000; i++) {
     const x = -105 + R() * 148, z = -78 + R() * 254;
     if (x < -78.6) continue;
@@ -449,7 +536,7 @@ export function buildOutside(scene, world, M) {
   // Karte fürs Handy
   G.mapData = {
     lines: [
-      { pts: [[0, -72], [0, 62]], color: '#c9b88a', width: 5 },
+      { pts: [[0, -72], ...P.schneise], color: '#c9b88a', width: 5 },
       { pts: [[-30, -40], [-60, 20], [-90, 60], [-90, 180]], color: '#7a6a4a', width: 2, dash: [3, 4] },
       { pts: [[-85.5, 40], [-85.5, 180]], color: '#b8a678', width: 3 },
       { pts: [[-83.2, 40], [-83.2, 180]], color: '#3a6ea8', width: 3 },
@@ -881,6 +968,27 @@ function buildBeyond(B, M, scene, world, terrain) {
     for (let k = 0; k < 18; k++) B.add(boxGeo(0.24, 0.08, 0.12, 1), brickM, -101.5 + (R() - 0.5) * 0.7, 0.05 + R() * 0.22, 104.8 + R() * 2.4, R(), R() * 3, R());
     B.add(boxGeo(0.25, 0.3, 2.6, 1), lam('rubble', { color: 0x4a4038 }), -101.5, 0.15, 106.0, 0, 0, 0.12);
     world.addBox(-101.75, -101.25, 104.6, 107.4, -50, 0.36, { label: 'Schutt (springen)' });
+    // Schubkarre und Blumentöpfe quer im Weg (springen)
+    const wb = lam('wheelbarrow', { color: 0x4a5a3a });
+    B.add(boxGeo(0.62, 0.26, 0.9, 1), wb, -106.45, 0.34, 105.55, 0.0, 0.0, -0.08);
+    B.add(boxGeo(0.5, 0.04, 0.78, 1), M.black, -106.45, 0.47, 105.55, 0.0, 0.0, -0.08);
+    for (const dz of [-0.24, 0.24]) {
+      B.add(cylGeo(0.022, 0.022, 1.0, 6, 1), M.metal, -106.1, 0.38, 105.55 + dz, 0, 0, Math.PI / 2 - 0.22);
+      B.add(cylGeo(0.02, 0.02, 0.3, 6, 1), M.metal, -105.95, 0.15, 105.55 + dz);
+    }
+    B.add(cylGeo(0.16, 0.16, 0.08, 12, 1), M.black, -106.95, 0.16, 105.55, Math.PI / 2, 0, 0);
+    const pot = lam('terracotta', { color: 0x9a5236 });
+    for (let k = 0; k < 6; k++) B.add(cylGeo(0.13, 0.095, 0.22, 8, 1), pot, -106.55 + (R() - 0.5) * 0.45, 0.11, 106.35 + k * 0.19, 0, 0, k % 3 === 2 ? 1.45 : 0);
+    B.add(boxGeo(0.5, 0.3, 0.4, 1), lam('crate', { color: 0x6a5232 }), -106.5, 0.15, 104.85);
+    world.addBox(-107.0, -105.7, 104.5, 107.5, -50, 0.45, { label: 'Schubkarre (springen)' });
+    // Wäscheleine mit Laken in Kopfhöhe (ducken)
+    for (const z of [104.55, 107.45]) B.add(cylGeo(0.03, 0.03, 2.1, 6, 1), M.metal, -109.4, 1.05, z);
+    B.add(cylGeo(0.006, 0.006, 2.9, 4, 1), M.white, -109.4, 2.0, 106.0, Math.PI / 2, 0, 0);
+    for (const [z, w, c] of [[105.0, 0.9, 0xd8d4c8], [105.95, 0.8, 0x8a9ab0], [106.85, 0.85, 0xc8b8a8]]) {
+      const sh = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.75), new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide }));
+      sh.position.set(-109.4, 1.6, z); sh.rotation.y = Math.PI / 2; scene.add(sh);
+    }
+    world.addBox(-109.6, -109.2, 104.5, 107.5, 1.22, 2.0, { label: 'Wäscheleine (ducken)' });
   }
   // Ufergebüsch am Übergang über den Bach (zeigt die Grenze)
   {

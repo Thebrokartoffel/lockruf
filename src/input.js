@@ -7,6 +7,7 @@ export const DEFAULT_KEYS = {
   forward: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', sprint: 'ShiftLeft', crouch: 'KeyC', jump: 'Space',
   use: 'KeyE', flash: 'KeyF', phone: 'Tab', reply1: 'Digit1', reply2: 'Digit2', app: 'KeyQ',
 };
+import { ICONS } from './icons.js';
 export const KEY_LABELS = {
   forward: 'Vorwärts', back: 'Rückwärts', left: 'Links', right: 'Rechts', sprint: 'Rennen', crouch: 'Ducken', jump: 'Springen',
   use: 'Benutzen', flash: 'Taschenlampe', phone: 'Handy', reply1: 'Antwort 1', reply2: 'Antwort 2', app: 'Handy: Chat/Karte',
@@ -26,7 +27,8 @@ export function keyName(code) {
   if (code.startsWith('Numpad')) return 'Num ' + code.slice(6);
   return code;
 }
-const TOUCH_LABELS = { use: '✋', jump: '⤒', crouch: '⤓', flash: '☀', phone: '▯', reply1: '1', reply2: '2', app: '⇄', sprint: 'Stick ganz vor', forward: 'Stick', back: 'Stick', left: 'Stick', right: 'Stick', confirm: '✋' };
+const TOUCH_LABELS = { use: ICONS.use, jump: ICONS.jump, crouch: ICONS.crouch, flash: ICONS.flash, phone: ICONS.phone, reply1: '1', reply2: '2', app: ICONS.map,
+  sprint: 'Stick ganz vor', forward: 'Stick', back: 'Stick', left: 'Stick', right: 'Stick', confirm: ICONS.use };
 export const K = (a) => {
   if (G.touchOn && TOUCH_LABELS[a]) return TOUCH_LABELS[a];
   const c = (G.settings.keys || DEFAULT_KEYS)[a];

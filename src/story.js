@@ -2,7 +2,7 @@
 // Alles läuft in Spielzeit (G.time) und lässt sich beim Kapitelwechsel abbrechen (Token).
 import * as THREE from 'three';
 import { G, saveProgress } from './state.js';
-import { P } from './level/outside.js';
+import { P, schX } from './level/outside.js';
 import { HUT } from './level/hut.js';
 import { HOME } from './level/home.js';
 import { clamp, angleDiff } from './util.js';
@@ -24,7 +24,7 @@ export const CHAPTERS = [
   { id: 8, name: '03:31', sub: 'Zuhause' },
 ];
 // Checkpoints innerhalb eines Kapitels (für Neustart nach dem Erwischtwerden und den Godmode)
-export const CHECKPOINTS = { 1: [['start', 'Zimmer'], ['og', 'Obergeschoss'], ['eg', 'Erdgeschoss']], 6: [['start', 'Schacht-Ausgang'], ['tor', 'Am Tor']] };
+export const CHECKPOINTS = { 1: [['start', 'Zimmer'], ['og', 'Obergeschoss'], ['eg', 'Erdgeschoss'], ['mama', 'Schlüssel holen']], 6: [['start', 'Schacht-Ausgang'], ['tor', 'Am Tor']] };
 
 const yawTo = (fx, fz) => Math.atan2(-fx, -fz);
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -167,7 +167,7 @@ export class Story {
     Object.assign(G.phone, { battery: bat, charging: false, network: ![4, 5].includes(ch), dropped: false, mapUnlocked: ch >= 6, minBattery: ch <= 5 ? 2 : 1 });
     G.chat = chatFor(ch, cp);
     G.ui.phoneTab = 'chat';
-    this.setClock(ch === 1 && cp === 'eg' ? '01:51' : ch === 1 && cp === 'og' ? '01:48' : ['03:12', '01:43', '01:52', '02:08', '02:17', '02:39', '03:14', '03:24', '03:31'][ch]);
+    this.setClock(ch === 1 && cp === 'mama' ? '01:57' : ch === 1 && cp === 'eg' ? '01:51' : ch === 1 && cp === 'og' ? '01:48' : ['03:12', '01:43', '01:52', '02:08', '02:17', '02:39', '03:14', '03:24', '03:31'][ch]);
     G.ui.clockShow(G.flags.hasPhone);
     // Objekte
     O.pile.reset(); if (ch >= 4) O.pile.clear(true);
@@ -195,6 +195,15 @@ export class Story {
     this.resetBranch(ch >= 7);
     O.fogPuffs.enabled = true;
     H.frontDoor.set(0);
+    // Haus: Türen, Mama, Fernseher, Schatten
+    H.roomDoor.set(ch === 1 && cp && cp !== 'start' ? 1 : 0);
+    H.bathDoor.set(0); H.curtain(false); H.figure('kitchen', false); H.figure('living', false);
+    const momDown = ch === 1 && cp !== 'mama';
+    H.momLump.visible = ch === 1 && cp === 'mama';
+    H.mom.root.visible = momDown; H.tv(momDown);
+    if (momDown) { H.mom.root.position.set(...H.sofaSeat); H.mom.root.rotation.y = -Math.PI / 2; H.mom.sit(); H.mom.neck.rotation.y = 0; }
+    this._hideSpot = null;
+    document.getElementById('veil').className = '';
     // Audio
     for (const n of ['humIn', 'humOut', 'tube', 'snore', 'stream', 'traffic', 'fridge']) A.stopLoop(n, 0.3);
     A.heartbeat(false);
@@ -215,7 +224,7 @@ export class Story {
     // Spieler
     const sp = {
       0: [...HUT.coldOpen, 0, 0.35],
-      1: cp === 'eg' ? [...HOME.egSpawn, yawTo(-0.4, 1), 0] : cp === 'og' ? [...HOME.ogSpawn, yawTo(0, 1), -0.05] : [...HOME.spawn, yawTo(0.5, -1), -0.1],
+      1: cp === 'mama' ? [504.85, 0, 11.95, yawTo(0, -1), 0.05] : cp === 'eg' ? [...HOME.egSpawn, yawTo(-0.4, 1), 0] : cp === 'og' ? [...HOME.ogSpawn, yawTo(0, 1), -0.05] : [...HOME.spawn, yawTo(0.5, -1), -0.1],
       2: [...P.homeSpawn, -Math.PI / 2, 0],
       3: [0, 0, -31, Math.PI, 0],
       4: [-9.5, 0, 55.5, yawTo(-0.7, 0.6), 0],
@@ -264,25 +273,101 @@ export class Story {
     this.run(nextCh, true);
   }
 
-  // ---------------- Verstecken (Abstellkammer) ----------------
-  hide() {
-    const pl = G.player, C = G.objects.home.closet;
+  // ---------------- Verstecken (Abstellkammer, Schränke, Bett, Duschvorhang) ----------------
+  hide(spot = G.objects.home.spots.kammer) {
+    const pl = G.player, H = G.objects.home;
     if (pl.hidden) return;
-    pl.hidden = true; pl.scripted = true; pl.forceStance = 'crouch'; pl.stance = 'crouch';
-    G.audio.creak(C.door, 0.5, 0.6);
-    pl.teleport(C.inside[0], C.inside[1], C.inside[2], Math.PI / 2, -0.05);
+    pl.hidden = true; pl.scripted = true; this._hideSpot = spot;
+    pl.forceStance = spot.lying ? 'crawl' : 'crouch'; pl.stance = pl.forceStance;
+    G.audio.creak(spot.pos, 0.45, 0.6);
+    pl.teleport(spot.inside[0], spot.inside[1], spot.inside[2], spot.yaw, spot.lying ? 0.25 : -0.05);
     pl.setFlash(false);
-    document.getElementById('slats').classList.add('show');
-    G.ui.hint(`<b>${K('use')}</b> rauskommen`, 4);
+    if (spot.id === 'dusche') H.curtain(true);
+    if (spot.overlay === 'slats') document.getElementById('slats').classList.add('show');
+    else document.getElementById('veil').className = 'show ' + spot.overlay;
+    // „Rauskommen“ liegt immer direkt vor der Kamera
+    const f = pl.forward();
+    this._outIt = this.interact({ story: true, pos: G.camera.position.clone().addScaledVector(f, 0.9), radius: 1.2, range: 2.4, once: true, text: 'Rauskommen', onUse: () => this.unhide() });
+    G.ui.hint(G.touchOn ? 'Benutzen: rauskommen' : `<b>${K('use')}</b> rauskommen`, 4);
   }
   unhide() {
-    const pl = G.player, C = G.objects.home.closet;
+    const pl = G.player, H = G.objects.home, spot = this._hideSpot || H.spots.kammer;
     if (!pl.hidden) return;
     pl.hidden = false; pl.scripted = false; pl.forceStance = null;
-    G.audio.creak(C.door, 0.6, 0.5);
-    if (G.noise) G.noise.add(0.08, V(...C.out), 'Tür');
-    pl.teleport(C.out[0], C.out[1], C.out[2], Math.PI / 2, 0);
+    G.audio.creak(spot.pos, 0.55, 0.5);
+    if (G.noise) G.noise.add(0.08, V(...spot.out), 'Versteck');
+    pl.teleport(spot.out[0], spot.out[1], spot.out[2], spot.yaw, 0);
+    if (spot.id === 'dusche') H.curtain(false);
     document.getElementById('slats').classList.remove('show');
+    document.getElementById('veil').className = '';
+    if (this._outIt) { this._outIt.used = true; this._outIt = null; }
+    this._hideSpot = null;
+  }
+  // Verstecke im Haus anbieten (Abstellkammer, Kleiderschränke, Bett, Duschvorhang)
+  offerHideSpots() {
+    const pl = G.player, H = G.objects.home;
+    for (const sp of Object.values(H.spots)) {
+      this.interact({ story: true, pos: sp.pos, radius: sp.id === 'bett' ? 0.6 : 0.5, range: 2.3, once: false, text: sp.name, enabled: () => !pl.hidden, onUse: () => this.hide(sp) });
+    }
+    // Badtür
+    this.interact({ story: true, pos: H.bathDoor.pos, radius: 0.5, range: 2.2, once: false, text: () => (H.bathDoor.open ? 'Badtür zumachen' : 'Badtür öffnen'),
+      onUse: () => { const o = !H.bathDoor.open; H.bathDoor.set(o ? 1 : 0, true); G.audio.creak(H.bathDoor.pos, 0.25, 0.5); G.noise.add(0.05, H.bathDoor.pos, 'Badtür'); } });
+  }
+  looksAt(pos, minDot) {
+    const d = new THREE.Vector3().subVectors(pos, G.camera.position); const l = d.length() || 1;
+    return G.player.forward().dot(d.divideScalar(l)) > minDot;
+  }
+  // NPC einen Weg ablaufen lassen (abbruchsicher über until)
+  async npcWalk(man, pts, spd = 1.1, onWp = null) {
+    let i = 0, done = false, stepT = 0;
+    const pos = V(...pts[0]); man.root.position.copy(pos); man.stand(); man.root.visible = true;
+    let yaw = man.root.rotation.y;
+    this.addUp((dt) => {
+      if (done) return;
+      const t = V(...pts[i]); const dx = t.x - pos.x, dz = t.z - pos.z, d = Math.hypot(dx, dz);
+      if (d < 0.06) { if (onWp) onWp(i); i++; if (i >= pts.length) { done = true; man.stand(); } return; }
+      const k = Math.min(1, spd * dt / d); pos.x += dx * k; pos.z += dz * k;
+      yaw += angleDiff(yaw, yawTo(dx, dz)) * (1 - Math.exp(-6 * dt)); man.root.rotation.y = yaw;
+      const gy = G.world.groundAt(pos.x, pos.z, pos.y + 0.4, 0.5); if (isFinite(gy)) pos.y += (gy - pos.y) * (1 - Math.exp(-18 * dt));
+      man.root.position.copy(pos); man.walk(dt, spd);
+      stepT -= dt; if (stepT < 0) { stepT = 0.62; G.audio.footstep(pos.y > 0.2 && pos.y < 2.8 ? 'stairs' : 'woodfloor', 0.45, pos.clone().add(V(0, 0.05, 0))); }
+    });
+    await this.until(() => done);
+  }
+  // Schatten hinter einem Fenster: taucht im Augenwinkel auf, weg, sobald man genau hinsieht. Kein Text, kein Ton.
+  windowGlimpse(which, maxD = 6.5) {
+    const H = G.objects.home, fig = H.figureMesh(which), pl = G.player;
+    let state = 0, t0 = 0;
+    this.addUp(() => {
+      if (state === 2) return;
+      const d = fig.position.distanceTo(G.camera.position);
+      const dot = pl.forward().dot(fig.position.clone().sub(G.camera.position).divideScalar(d || 1));
+      if (state === 0) { if (d < maxD && d > 2.2 && dot > 0.5 && dot < 0.88 && pl.p.y < 1.5) { state = 1; t0 = G.time; H.figure(which, true); this.mark('Schatten am Fenster'); } }
+      else if (dot > 0.975 || d < 2.0 || G.time - t0 > 1.1) { state = 2; H.figure(which, false); }
+    });
+  }
+  // Gestalt draußen (Silhouette): im Augenwinkel sichtbar, verschwindet beim genauen Hinsehen oder läuft weg
+  glimpse(x, z, { yaw = null, walk = null, minD = 9, maxD = 32, show = 0.45, gone = 0.965, dur = 1.4, when = () => true, label = 'Schatten' } = {}) {
+    const sil = G.objects.silhouette, pl = G.player;
+    let state = 0, t0 = 0;
+    const p = V(x, G.terrain.height(x, z), z);
+    this.addUp((dt) => {
+      if (state === 2) return;
+      if (state === 0) {
+        if (!when()) return;
+        const d = Math.hypot(p.x - pl.p.x, p.z - pl.p.z);
+        const dir = V(p.x - G.camera.position.x, p.y + 1.2 - G.camera.position.y, p.z - G.camera.position.z).normalize();
+        const dot = pl.forward().dot(dir);
+        if (d > minD && d < maxD && dot > show && dot < gone) {
+          state = 1; t0 = G.time; sil.root.position.copy(p); sil.root.rotation.y = yaw ?? yawTo(pl.p.x - p.x, pl.p.z - p.z); sil.stand(); sil.root.visible = true; this.mark(label);
+        }
+        return;
+      }
+      const sp = sil.root.position;
+      if (walk) { const [wx, wz, spd] = walk; const dx = wx - sp.x, dz = wz - sp.z, l = Math.hypot(dx, dz); if (l > 0.1) { const k = Math.min(1, spd * dt / l); sp.x += dx * k; sp.z += dz * k; sp.y = G.terrain.height(sp.x, sp.z); sil.root.rotation.y = yawTo(dx, dz); sil.walk(dt, spd); } }
+      const dir = V(sp.x - G.camera.position.x, sp.y + 1.2 - G.camera.position.y, sp.z - G.camera.position.z); const d = dir.length(); dir.divideScalar(d);
+      if ((!walk && pl.forward().dot(dir) > gone) || G.time - t0 > dur || d < minD * 0.6) { state = 2; sil.root.visible = false; }
+    });
   }
 
   // ================================================================
@@ -351,14 +436,14 @@ export class Story {
       this.addUp((dt) => {
         if (!buzzing) return;
         this._bz = (this._bz ?? 0.2) - dt;
-        if (this._bz < 0) { this._bz = 3.2; A.vibrate(O.homePhone.pos); O.homePhone.light(true); this.after(2.6, () => buzzing && O.homePhone.light(false)); }
+        if (this._bz < 0) { this._bz = 3.2; A.vibrate(O.homePhone.pos); O.homePhone.light(true); this.after(2.6, () => O.homePhone.light(false)); }
       });
       await this.say('…Wer schreibt mir um die Uhrzeit?', 3);
       this.obj('Geh an dein Handy');
-      const ph = this.interact({ story: true, pos: O.homePhone.pos, radius: 0.15, text: 'Handy nehmen', onUse: () => { A.pickup(); O.homePhone.group.visible = false; buzzing = false; G.inv.add('phone'); G.flags.hasPhone = true; G.ui.clockShow(true); } });
+      const ph = this.interact({ story: true, pos: O.homePhone.pos, radius: 0.15, text: 'Handy nehmen', onUse: () => { A.pickup(); buzzing = false; O.homePhone.light(false); O.homePhone.group.visible = false; G.inv.add('phone'); G.flags.hasPhone = true; G.ui.clockShow(true); } });
       await this.use(ph);
       this.mark('Handy genommen');
-      G.ui.hint(`<b>${K('phone')}</b> Handy &nbsp;&nbsp; <b>${K('flash')}</b> Taschenlampe`, 7);
+      G.ui.hint(G.touchOn ? `<b>${K('phone')}</b> Handy &nbsp;&nbsp; <b>${K('flash')}</b> Licht` : `<b>${K('phone')}</b> Handy &nbsp;&nbsp; <b>${K('flash')}</b> Taschenlampe`, 7);
       G.ui.addMsg('them', 'bist du noch wach', '01:41');
       G.ui.togglePhone(true);
       await this.wait(1.4);
@@ -373,7 +458,7 @@ export class Story {
       await this.wait(2.2);
       this.msg('bin eh grad am goetheturm');
       await this.wait(1.6);
-      this.msg('komm kurz hin, ist halloween. wir drehen ne runde durch den wald');
+      this.msg('komm kurz hin, ist halloween 🎃 wir drehen ne runde durch den wald');
       await this.wait(1.6);
       this.msg('aber ohne maps, nur mit taschenlampe');
       await this.say('Er ist schon unterwegs. Natürlich ist er das.', 3.2);
@@ -386,13 +471,22 @@ export class Story {
       const jk = this.interact({ story: true, pos: O.jacket.pos, radius: 0.3, text: 'Jacke anziehen', onUse: () => { A.zip(); O.jacket.group.visible = false; G.inv.add('jacket'); } });
       await this.use(jk);
       this.mark('Jacke an');
-      this._cp = 'og';
       await this.say('Okay. Leise jetzt. Papa schläft.', 3);
+      // Zimmertür: langsam aufmachen
+      this.obj('Mach leise deine Tür auf');
+      const rd = this.interact({ story: true, pos: H.roomDoor.pos, radius: 0.55, range: 2.4, hold: 1.2, text: 'Tür langsam öffnen',
+        onHoldStart: () => A.creak(H.roomDoor.pos, 0.2, 0.35), onHold: (dt) => { if (rand() < dt * 1.4) A.creak(H.roomDoor.pos, 0.1, 0.25); },
+        onUse: () => { H.roomDoor.set(1, true); G.noise.add(0.05, H.roomDoor.pos, 'Zimmertür'); } });
+      await this.use(rd);
+      this.mark('Zimmertür auf');
+      this._cp = 'og';
     } else {
       G.ui.fade(0, 1.4);
-      G.ui.card(cp === 'eg' ? '01:51' : '01:48', cp === 'eg' ? 'Erdgeschoss' : 'Zuhause', 2.2);
+      const lbl = { og: ['01:48', 'Zuhause'], eg: ['01:51', 'Erdgeschoss'], mama: ['01:57', 'Der Schlüssel'] }[cp] || ['01:48', 'Zuhause'];
+      G.ui.card(lbl[0], lbl[1], 2.2);
       await this.wait(0.8);
     }
+    this.offerHideSpots();
 
     // ---------- Obergeschoss: am Schlafzimmer vorbei ----------
     if (this._cp === 'og') {
@@ -411,43 +505,84 @@ export class Story {
       this._cp = 'eg';
     }
 
-    // ---------- Erdgeschoss ----------
+    // ---------- Erdgeschoss: Haustür zu, Mama auf dem Sofa ----------
+    let triedDoor = false, momTalked = this._cp === 'mama';
+    this.interact({ story: true, pos: H.frontDoor.pos, radius: 0.45, once: false, text: 'Tür öffnen', enabled: () => !G.inv.has('homeKeys'),
+      onUse: () => {
+        A.burst({ pos: H.frontDoor.pos, f: 600, q: 2, d: 0.1, peak: 0.3 });
+        if (momTalked) G.ui.say('Zu. Der Schlüssel liegt oben bei ihm.', 2.8);
+        else if (!triedDoor) { triedDoor = true; G.ui.say('Abgeschlossen. …Und der Schlüssel hängt nicht am Brett.', 3.6); this.obj('Such den Hausschlüssel'); }
+        else G.ui.say('Zu. Ohne Schlüssel komm ich hier nicht raus.', 2.8);
+      } });
+    this.interact({ story: true, pos: V(505.36, 1.45, 14.85), radius: 0.25, range: 2.2, once: false, text: 'Schlüsselbrett ansehen', onUse: () => G.ui.say(momTalked ? 'Leer. Er hat ihn oben.' : 'Leer. Wo ist der Schlüssel?', 2.6) });
+    this.interact({ story: true, pos: V(504.69, 1.35, 3.0), radius: 0.15, range: 2.2, text: 'Zettel lesen', onUse: () => this.sayLines(['„LEON: Müll raus!! – Papa“', 'Natürlich.']) });
+    if (this._cp === 'eg') {
+      this.onDadStage = null;
+      await this.say('Unten. Jetzt raus, bevor er was merkt.', 3);
+      this.obj('Geh zur Haustür');
+      this.windowGlimpse('kitchen');
+      // Mama sitzt im Dunkeln vor dem stummen Fernseher – man sieht sie erst, wenn man um die Ecke kommt
+      const seat = V(H.sofaSeat[0], 1.05, H.sofaSeat[2]);
+      await this.until(() => { if (pl.p.y > 1 || pl.p.x > 501.9 || pl.p.z < 5.6) return false; const d = Math.hypot(pl.p.x - seat.x, pl.p.z - seat.z); return d < 3.3 || (d < 6.2 && this.looksAt(seat, 0.93)); });
+      await this.momScene(seat);
+      momTalked = true;
+      this._cp = 'mama';
+    }
+
+    // ---------- Schlüssel aus dem Elternschlafzimmer ----------
+    this.windowGlimpse('living', 7.5);
+    this.obj('Hol den Schlüssel aus dem Schlafzimmer');
+    G.ui.hint('Geduckt und langsam. Im Schlafzimmer hört er jeden Schritt.', 6);
+    this.onDadStage = (s) => {
+      if (s === 1 && !this._s1) { this._s1 = true; G.ui.say('…Er schnarcht nicht mehr.', 2.6); }
+      if (s === 2 && !this._s2) { this._s2 = true; G.ui.say('Nicht bewegen …', 2); }
+      if (s === 3 && !this._s3) { this._s3 = true; G.ui.say('Licht! Er wird wach!', 2.6); }
+      if (s === 4) { this.mark('Papa schaut in den Flur'); this.obj('Versteck dich!'); D.onBack = () => { G.ui.say('…Puh.', 2); this.obj(G.inv.has('homeKeys') ? 'Raus. Leise.' : 'Hol den Schlüssel aus dem Schlafzimmer'); }; }
+    };
+    this.addUp(() => {
+      if (!this._momWarn && D.mode === 'sleep' && D.alert > 0.42 && pl.p.y > 2 && pl.p.x < 502.2 && pl.p.z > 4.4) { this._momWarn = true; G.ui.say('…Leon? Bist du verrückt? Raus hier …', 3, 'Mama (flüstert)'); }
+    });
+    let pOpen = false;
+    this.interact({ story: true, pos: H.doorPos, radius: 0.5, range: 2.2, hold: 1.6, text: 'Tür ganz langsam öffnen', enabled: () => !pOpen && D.mode === 'sleep',
+      onHoldStart: () => A.creak(H.doorPos, 0.16, 0.35), onHold: (dt) => { if (rand() < dt * 1.2) A.creak(H.doorPos, 0.09, 0.25); },
+      onUse: () => { pOpen = true; H.parentsDoor.set(0.6, true); G.noise.add(0.05, H.doorPos, 'Elterntür'); this.mark('Elterntür auf'); } });
+    // Schlüssel ganz vorsichtig nehmen – wer zu früh loslässt, lässt ihn klirren
+    let taken = false, holding = false, holdP = 0;
+    const keys = this.interact({ story: true, pos: O.homeKeys.pos, radius: 0.16, range: 1.9, hold: 2.0, text: 'Schlüssel ganz vorsichtig nehmen',
+      onHoldStart: () => { holding = true; holdP = 0; },
+      onHold: (dt, p) => { holdP = p; if (rand() < dt * 2) A.burst({ pos: O.homeKeys.pos, f: 5200, q: 8, d: 0.03, peak: 0.05 }); },
+      onUse: () => { holding = false; taken = true; this.onDadStage = null; O.homeKeys.group.visible = false; G.inv.add('homeKeys'); A.pickup(); } });
+    this.addUp(() => {
+      if (holding && pl.holding !== keys && !taken) { holding = false; if (holdP > 0.05) { A.keys(O.homeKeys.pos); G.noise.add(0.34, O.homeKeys.pos, 'Schlüssel'); G.ui.say('Shit …', 1.2); } }
+    });
+    await this.until(() => taken || keys.used);
+    this.mark('Schlüssel genommen');
+    // Er wird trotzdem wach – kurzer Vorsprung, dann sucht er
     this.onDadStage = null;
-    await this.say('Unten. Jetzt raus, bevor er was merkt.', 3);
-    this.obj('Geh zur Haustür');
-    const hideIt = this.interact({ story: true, pos: H.closet.door, radius: 0.5, range: 2.2, once: false, text: () => (pl.hidden ? 'Rauskommen' : 'In der Abstellkammer verstecken'), onUse: () => (pl.hidden ? this.unhide() : this.hide()) });
-    void hideIt;
-    this.interact({ story: true, pos: V(504.69, 1.35, 3.0), radius: 0.15, range: 2.2, text: 'Zettel lesen', onUse: () => G.ui.say('„Bin bis Sonntag bei Oma. Kuss, Mama.“', 3.2) });
-    let chainOff = false, keysTaken = false, dadDone = false;
-    this.interact({ story: true, pos: H.frontDoor.pos, radius: 0.45, once: false, text: 'Tür öffnen', enabled: () => !keysTaken,
-      onUse: () => { A.burst({ pos: H.frontDoor.pos, f: 600, q: 2, d: 0.1, peak: 0.3 }); G.ui.say('Abgeschlossen. Mein Schlüssel … der liegt noch in der Küche.', 3.4); this.obj('Hol deinen Schlüssel aus der Küche'); } });
-    const keys = this.interact({ story: true, pos: O.homeKeys.pos, radius: 0.12, range: 2.0, text: 'Schlüssel nehmen',
-      onUse: () => { A.keys(O.homeKeys.pos); A.keys(O.homeKeys.pos); O.homeKeys.group.visible = false; G.inv.add('homeKeys'); keysTaken = true; G.noise.add(0.6, O.homeKeys.pos, 'Schlüssel'); } });
-    await this.use(keys);
-    this.mark('Schlüssel klirren');
-    await this.wait(1.2);
-    D.alert = 0.4; A.setLoop('snore', 0, 0.12); D.snoring = false;
-    await this.say('…Scheiße. Viel zu laut.', 2.4);
-    await this.wait(1.4);
-    A.creak(V(...H.bedPos), 1.2, 1.1);
-    await this.wait(1.1);
-    A.heavyStep(V(500.5, 3.2, 6.9), 0.8);
-    await this.until(() => D.mode === 'sleep');      // falls er gerade schon nachschaut: erst zurück ins Bett
-    this.mark('Papa steht auf');
-    D.wakeAndPatrol();
+    await this.wait(1.0);
+    D.alert = Math.max(D.alert, 0.3); A.setLoop('snore', 0, 0.2); D.snoring = false;
+    A.creak(V(...H.bedPos), 0.8, 1.0);
+    this.obj('Raus hier!');
+    await this.wait(2.2);
+    D.mumble('Hm … wer …?');
+    A.heartbeat(true, 1.4);
+    await this.wait(3.4);
+    await this.until(() => D.mode === 'sleep');
+    this.mark('Papa sucht');
+    D.searchPatrol();
+    let dadDone = false;
     D.onBack = () => { dadDone = true; };
-    A.heartbeat(true, 1.3);
-    await this.say('Er kommt runter. Versteck dich!', 2.6);
     this.obj('Versteck dich!');
-    G.ui.hint('Abstellkammer unter der Treppe &nbsp;·&nbsp; geduckt hinter dem Sofa &nbsp;·&nbsp; Licht aus', 8);
+    G.ui.hint('Kleiderschrank · dein Bett · Duschvorhang im Bad · Abstellkammer · hinter dem Sofa', 8);
     await this.until(() => dadDone);
     A.heartbeat(false);
-    this.mark('Papa wieder oben');
+    this.mark('Papa wieder im Bett');
     await this.wait(2.5);
-    await this.say('…Er ist wieder oben.', 2.4);
-    await this.wait(3);
-    if (pl.hidden) G.ui.hint(`<b>${K('use')}</b> rauskommen`, 4);
+    await this.say('…Er liegt wieder.', 2.4);
+    await this.wait(2.0);
+    if (pl.hidden) G.ui.hint(G.touchOn ? 'Benutzen: rauskommen' : `<b>${K('use')}</b> rauskommen`, 4);
     this.obj('Raus. Leise.');
+    let chainOff = false;
     const chain = this.interact({ story: true, pos: H.frontDoor.chainPos, radius: 0.25, range: 2.2, hold: 1.1, text: 'Kette lösen', enabled: () => !chainOff,
       onHold: (dt) => { if (rand() < dt * 3) A.burst({ pos: H.frontDoor.chainPos, f: 4200, q: 6, d: 0.04, peak: 0.12 }); } });
     const unlock = this.interact({ story: true, pos: H.frontDoor.pos, radius: 0.45, range: 2.3, hold: 1.8, text: 'Tür leise aufschließen', enabled: () => chainOff,
@@ -469,6 +604,37 @@ export class Story {
     await this.fade(1, 1.0);
     A.stopLoop('fridge', 0.3);
     this.run(2, true);
+  }
+
+  // Mama auf dem Sofa: Schreck, Warnung, sie geht hoch ins Bett
+  async momScene(seat) {
+    const pl = G.player, A = G.audio, H = G.objects.home, mom = H.mom;
+    this.mark('Mama auf dem Sofa');
+    A.sting('soft'); G.post.scare(0.5); pl.shake(0.45, 0.3);
+    mom.neck.rotation.y = clamp(angleDiff(mom.root.rotation.y, yawTo(pl.p.x - seat.x, pl.p.z - seat.z)), -1.2, 1.2);
+    pl.canMove = false;
+    pl.lookTarget = { pos: seat, speed: 6 };
+    G.ui.say('Leon?!', 1.6, 'Mama');
+    await this.wait(1.6);
+    pl.lookTarget = null;
+    await this.say('Mama! …Was machst du hier im Dunkeln?', 2.8, 'Leon');
+    await this.say('Ich konnte nicht schlafen.', 2.2, 'Mama');
+    await this.say('Und du? Es ist zwei Uhr nachts.', 2.6, 'Mama');
+    await this.say('Ich … wollte nur was trinken.', 2.4, 'Leon');
+    await this.wait(0.5);
+    await this.say('Mit Jacke?', 1.8, 'Mama');
+    await this.wait(1.0);
+    await this.say('…Ich will es gar nicht wissen. Pass bloß auf, dein Vater ist heute nicht gut drauf.', 4.2, 'Mama');
+    await this.say('Den Hausschlüssel hat er mit hochgenommen. Wie immer, wenn er sauer ist.', 4.0, 'Mama');
+    await this.say('Ich geh ins Bett. Mach keinen Ärger, okay?', 3.0, 'Mama');
+    pl.canMove = true;
+    A.switchClick(V(501.7, 0.9, 9.0)); H.tv(false);
+    mom.neck.rotation.y = 0;
+    const R = H.momRoute;
+    await this.npcWalk(mom, [[499.25, 0, 8.95], ...R], 1.0, (i) => { if (i === 10) { H.parentsDoor.set(1, true); A.creak(H.doorPos, 0.3, 0.5); } });
+    mom.root.visible = false; H.momLump.visible = true; H.parentsDoor.set(0, true);
+    A.creak(V(...H.bedPos), 0.5, 0.7); A.burst({ pos: H.doorPos, f: 2400, q: 5, d: 0.06, peak: 0.2 });
+    await this.say('…Also oben. Bei ihm. Super.', 2.6);
   }
 
   caughtByDad(D) {
@@ -507,6 +673,7 @@ export class Story {
     A.slam(V(P.homeSpawn[0] - 1.2, 1, P.homeSpawn[2]), 0.25);
     G.ui.card('01:52', 'Wendelsweg', 2.6);
     this.obj('Geh zum Goetheturm');
+    this.glimpse(7.4, -84.5, { minD: 12, maxD: 36, when: () => pl.p.z > -120 && pl.p.z < -92, label: 'Schatten an der Straße' });
     await this.wait(2.5);
     await this.say('Halloween. Und die ganze Straße schläft.', 3.2);
     await this.until(() => pl.p.z > -102);
@@ -516,6 +683,7 @@ export class Story {
     this.mark('Am Spielplatz');
     await this.say('Der Goetheturm. Nachts sieht der noch höher aus.', 3.4);
     this.obj('Finde Deniz am Turm');
+    this.glimpse(19.5, -43.5, { minD: 10, maxD: 30, when: () => pl.p.z > -68, label: 'Schatten hinter dem Turm' });
     let canSeen = false;
     this.interact({ story: true, pos: O.can.position, radius: 0.12, range: 2.2, text: 'Dose ansehen', onUse: () => { canSeen = true; G.ui.say('Deniz\' Energy. Noch kalt. Er war hier.', 3.6); } });
     this.interact({ story: true, pos: G.towerSign, radius: 0.5, range: 3, text: 'Schild lesen', onUse: () => G.ui.say('„Vom 01.11. bis 31.03. geschlossen.“ Also ab morgen.', 3.6) });
@@ -550,6 +718,17 @@ export class Story {
     G.ui.card('02:08', 'Hügelschneise', 2.6);
     this.setClock('02:08');
     this.obj('Geh die Schneise entlang');
+    this.glimpse(10.5, 22.0, { walk: [-3.5, 22.8, 3.4], minD: 12, maxD: 28, show: 0.6, dur: 4.2, when: () => pl.p.z > -4 && pl.p.z < 9, label: 'Gestalt kreuzt den Weg' });
+    // Sicherung: wer schon hinter dem Durchschlupf ist, bevor die Story so weit ist, wird nicht festgehalten
+    this.addUp(() => {
+      if (this._ch3end || pl.p.x > -8.4 || pl.p.z < 50) return;
+      this._ch3end = true; O.pile.clear(true); G.ui.reply = null; G.ui.renderPhone(); G.ui.hint(null); this.mark('Abkürzung durchs Gebüsch');
+      this.run(4, false);
+    });
+    // Äste von Anfang an wegräumbar: wer früher dort ist als Deniz' Nachricht, kommt trotzdem durch
+    const pile = this.interact({ story: true, pos: [P.pile[0] + 0.4, G.terrain.height(...P.pile) + 0.7, P.pile[1]], radius: 0.9, range: 2.6, hold: 2.0, text: 'Äste wegräumen',
+      onHold: (dt) => { if (rand() < dt * 6) A.burst({ f: 1500, q: 0.6, d: 0.2, peak: 0.25 }); },
+      onUse: () => { O.pile.clear(); A.burst({ f: 900, q: 0.5, d: 0.6, peak: 0.5 }); } });
     if (pl.p.z < -20) await this.wait(3);
     if (!pl.flashOn) { await this.say('Ich seh fast nichts. Taschenlampe an.', 3); G.ui.hint(`<b>${K('flash')}</b> Taschenlampe`, 5); }
     await this.until(() => pl.p.z > 8);
@@ -566,7 +745,7 @@ export class Story {
     // Silhouette hinter dem Spieler auf dem Weg
     const sil = O.silhouette;
     const sz = Math.max(-25, pl.p.z - 24);
-    sil.root.position.set(0.6, G.terrain.height(0.6, sz), sz);
+    sil.root.position.set(schX(sz) + 0.6, G.terrain.height(schX(sz) + 0.6, sz), sz);
     sil.root.rotation.y = Math.PI;
     sil.stand(); sil.root.visible = true;
     const t0 = G.time;
@@ -602,10 +781,8 @@ export class Story {
     if (pl.p.x > -2) { pl.lookTarget = { pos: V(P.pile[0] + 1.5, 1.0, P.pile[1]), speed: 2.2 }; this.after(1.1, () => { pl.lookTarget = null; }); }
     await this.until(() => pl.p.x < -2.4 && pl.p.z > 52);
     G.ui.hint(`<b>${K('crouch')}</b> ducken`, 5);
-    const pile = this.interact({ story: true, pos: [P.pile[0] + 0.4, G.terrain.height(...P.pile) + 0.7, P.pile[1]], radius: 0.9, range: 2.6, hold: 2.0, text: 'Äste wegräumen', onHold: (dt) => { if (rand() < dt * 6) A.burst({ f: 1500, q: 0.6, d: 0.2, peak: 0.25 }); } });
     await this.use(pile);
-    O.pile.clear();
-    A.burst({ f: 900, q: 0.5, d: 0.6, peak: 0.5 });
+    this._ch3end = true;
     await this.until(() => pl.p.x < -9);
     this.run(4, false);
   }
@@ -621,6 +798,13 @@ export class Story {
     if (G.phone.battery > 19) G.phone.battery = 19;
     this.msg('ich hab band an die bäume gemacht. geh dem einfach nach');
     this.obj('Folge den Markierungen');
+    this.addUp(() => {
+      if (this._ch4end || Math.hypot(pl.p.x + 67, pl.p.z - 133.5) > 4.5) return;
+      this._ch4end = true; this.mark('Abkürzung zur Hütte');
+      if (G.phone.dropped) { O.groundPhone.hide(); G.phone.dropped = false; G.phone.battery = Math.min(G.phone.battery, 6); }
+      G.ui.reply = null; G.ui.renderPhone(); G.phone.network = false; G.flags.ambient = false; A.heartbeat(false);
+      this.run(5, false);
+    });
     G.flags.ambient = true;
     await this.until(() => pl.p.x < -13.5);
     await this.say('Flatterband. Hat Deniz das hingemacht?', 3.2);
@@ -708,6 +892,7 @@ export class Story {
     A.scream(P.speaker, 'distant', 1.5);
     await this.wait(2);
     await this.say('Er kommt von da vorne. Ganz nah.', 3);
+    this._ch4end = true;
     await this.until(() => Math.hypot(pl.p.x + 67, pl.p.z - 133.5) < 4);
     G.flags.ambient = false;
     this.run(5, false);
@@ -982,6 +1167,8 @@ export class Story {
       let ft = 0; const y0 = b.position.y, r0 = b.rotation.z;
       this.addUp((dt) => { if (ft >= 1) return; ft = Math.min(1, ft + dt / 0.55); const e = ft * ft; b.position.y = y0 + (gy + 0.25 - y0) * e; b.rotation.z = r0 + (Math.PI / 2 - r0) * e; b.rotation.x = e * 0.15; });
       await this.wait(0.6);
+      // Kollision erst, wenn Leon nicht gerade darunter steht (sonst hängt er im Ast fest)
+      await this.until(() => !(pl.p.x > -75 && pl.p.x < -69.4 && pl.p.z > 135.6 && pl.p.z < 137.2));
       this.branchCol.enabled = true;
       pl.shake(0.6, 0.3);
       G.ui.say('…Das war laut.', 1.8);
@@ -1008,7 +1195,7 @@ export class Story {
       G.ui.hint(`<b>${K('sprint')}</b> rennen &nbsp; <b>${K('jump')}</b> über Hindernisse springen`, 5);
       this.startChase({ pos: start, path: start.x > -60 ? undefined : [] });
       // Tor aufschließen (gedrückt halten, Schlüssel klappern)
-      const gate = this.interact({ story: true, pos: O.gate.lockPos, radius: 0.4, range: 2.6, hold: 1.6, text: 'Tor aufschließen', onHold: (dt) => { if (rand() < dt * 5) A.keys(O.gate.lockPos); } });
+      const gate = this.interact({ story: true, pos: O.gate.lockPos, radius: 0.4, range: 2.6, hold: 2.0, text: 'Tor aufschließen', onHold: (dt) => { if (rand() < dt * 5) A.keys(O.gate.lockPos); } });
       await this.use(gate);
       this.mark('Tor auf');
       this._cp6 = 'tor';
@@ -1095,9 +1282,9 @@ export class Story {
       target = tr[c.trailIdx] || pl.p;
     }
     // Gummiband: nah langsamer als Leons Sprint, weit weg schneller
-    let spd = 4.25 + 1.6 * clamp((toPl - 7) / 11, 0, 1);
+    let spd = 4.5 + 1.6 * clamp((toPl - 7) / 11, 0, 1);
     if (c.t < 1.0) spd *= 0.4 + 0.6 * c.t;
-    for (const z of CHASE_SLOW) if (Math.abs(c.pos.x - z[0]) < z[2] && Math.abs(c.pos.z - z[1]) < z[2]) spd = Math.min(spd, 3.0);
+    for (const z of CHASE_SLOW) if (Math.abs(c.pos.x - z[0]) < z[2] && Math.abs(c.pos.z - z[1]) < z[3]) spd = Math.min(spd, z[4]);
     const d = V(target.x - c.pos.x, 0, target.z - c.pos.z);
     const len = d.length();
     if (len > 0.01) {
@@ -1162,7 +1349,7 @@ export class Story {
     await this.wait(1.2);
     if (this.chase) { await this.say('Und er … er geht. Er bleibt im Dunkeln.', 3); }
     await this.wait(2.4);
-    this.msg('bis bald leon');
+    this.msg('bis bald leon 🙂');
     await this.wait(2.2);
     A.heartbeat(false);
     this.chase = null; O.man.show(false);
@@ -1231,7 +1418,8 @@ export class Story {
 }
 
 // Stellen, an denen auch der Verfolger langsamer wird (Hindernisse) [x, z, Radius]
-export const CHASE_SLOW = [[-72.2, 136.4, 2.4], [-75.2, 124.0, 1.6], [-92.0, 105.4, 1.2], [-97.0, 106.6, 1.2], [-101.5, 106.0, 1.0]];
+// Stellen, an denen auch er langsamer wird: [x, z, halbe Breite x, halbe Tiefe z, Tempo]
+export const CHASE_SLOW = [[-72.2, 136.4, 2.4, 2.4, 3.0], [-75.2, 121.0, 3.4, 0.9, 3.2], [-74.0, 126.5, 5.0, 1.1, 1.5], [-75.4, 110.6, 3.4, 0.9, 3.2], [-92.0, 105.4, 1.2, 1.2, 3.0], [-97.0, 106.6, 1.2, 1.2, 3.0], [-101.5, 106.0, 1.0, 1.0, 3.0], [-106.5, 106.0, 0.9, 1.6, 3.2], [-109.4, 106.0, 0.8, 1.6, 1.6]];
 
 // Chatverlauf zum Kapitelstart
 function chatFor(ch, cp) {
@@ -1245,13 +1433,13 @@ function chatFor(ch, cp) {
   if (ch >= 2 || (ch === 1 && cp && cp !== 'start')) c.push(
     { from: 'them', text: 'bist du noch wach' }, { from: 'them', text: 'hab stress mit meinem vater' }, { from: 'them', text: 'kann ich heute bei dir schlafen?' },
     { from: 'me', text: 'klar, komm vorbei' }, { from: 'them', text: 'danke' }, { from: 'them', text: 'bin eh grad am goetheturm' },
-    { from: 'them', text: 'komm kurz hin, ist halloween. wir drehen ne runde durch den wald' }, { from: 'them', text: 'aber ohne maps, nur mit taschenlampe' },
+    { from: 'them', text: 'komm kurz hin, ist halloween 🎃 wir drehen ne runde durch den wald' }, { from: 'them', text: 'aber ohne maps, nur mit taschenlampe' },
     { from: 'me', text: 'ok, bin in 10 min da' }, { from: 'them', text: 'bis gleich' },
   );
   if (ch >= 3) c.push({ from: 'them', text: 'bin schon im wald' }, { from: 'them', text: 'nimm den kiesweg hinterm spielplatz, einfach geradeaus' }, { from: 'me', text: 'ernsthaft?' }, { from: 'them', text: 'komm einfach' });
   if (ch >= 4) c.push({ from: 'them', text: 'da steht wer hinter dir' }, { from: 'them', text: 'spaß' }, { from: 'me', text: 'alter, lass das' }, { from: 'them', text: 'der weg ist gesperrt oder? geh links durchs gebüsch, da kommst du durch' });
   if (ch >= 5) c.push({ from: 'them', text: 'ich hab band an die bäume gemacht. geh dem einfach nach' }, { from: 'me', text: 'deniz?? war das du' }, { from: 'day', text: 'Nicht zugestellt' });
   if (ch >= 6) c.push({ from: 'them', text: 'hast du was gefunden 🙂' }, { from: 'them', text: 'du hättest auf dem weg bleiben sollen' }, { from: 'them', text: 'ich hör dich' });
-  if (ch >= 8) c.push({ from: 'them', text: 'bis bald leon' });
+  if (ch >= 8) c.push({ from: 'them', text: 'bis bald leon 🙂' });
   return c;
 }

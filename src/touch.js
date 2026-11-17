@@ -4,6 +4,7 @@
 // Touch genauso aufgezeichnet wie Tastatur und Maus und das Rückspulen im Godmode funktioniert auch am Handy.
 import { G } from './state.js';
 import { Input } from './input.js';
+import { ICONS } from './icons.js';
 
 const R = 58;              // Stick-Radius in CSS-Pixeln
 const LOOK = 2.3;          // Wischen: Pixel -> Mauspixel-Äquivalent
@@ -21,6 +22,7 @@ export class Touch {
     this.on = on;
     G.touchOn = on;
     document.body.classList.toggle('touch', on);
+    if (G.layoutPhone) G.layoutPhone();
     if (!on) { this.releaseAll(); document.body.classList.remove('phoneopen'); }
     else if (document.pointerLockElement) document.exitPointerLock();
   }
@@ -28,16 +30,16 @@ export class Touch {
   build() {
     this.root.innerHTML = `
       <div class="tjoy"><div class="base"></div><div class="knob"></div></div>
-      <button class="tb pause" data-act="pause" aria-label="Pause">☰</button>
+      <button class="tb pause" data-act="pause" aria-label="Pause">${ICONS.menu}</button>
       <div class="tcol">
-        <button class="tb" data-k="flash">☀<span>Licht</span></button>
-        <button class="tb" data-k="phone">▯<span>Handy</span></button>
-        <button class="tb ctx" data-k="app">⇄<span>Karte</span></button>
+        <button class="tb" data-k="flash">${ICONS.flash}<span>Licht</span></button>
+        <button class="tb" data-k="phone">${ICONS.phone}<span>Handy</span></button>
+        <button class="tb ctx" data-k="app"><i class="ic">${ICONS.map}</i><span>Karte</span></button>
       </div>
       <div class="tbtns">
-        <button class="tb tog" data-k="crouch">⤓<span>Ducken</span></button>
-        <button class="tb" data-k="jump">⤒<span>Springen</span></button>
-        <button class="tb big" data-k="use">✋<span>Benutzen</span></button>
+        <button class="tb tog" data-k="crouch">${ICONS.crouch}<span>Ducken</span></button>
+        <button class="tb" data-k="jump">${ICONS.jump}<span>Springen</span></button>
+        <button class="tb big" data-k="use">${ICONS.use}<span>Benutzen</span></button>
       </div>
       <div class="treply"><button class="tb rp" data-k="reply1"></button><button class="tb rp" data-k="reply2"></button></div>`;
     this.joyEl = this.root.querySelector('.tjoy');
@@ -72,6 +74,11 @@ export class Touch {
     e.preventDefault();
     const b = e.target.closest('button');
     try { this.root.setPointerCapture(e.pointerId); } catch (err) { /* egal */ }
+    if (G.noteOpen && !(b && b.dataset.act === 'pause')) {
+      this.press('use'); this.btn.use.classList.add('down');
+      this.ptr.set(e.pointerId, { kind: 'btn', k: 'use', el: this.btn.use });
+      return;
+    }
     if (b) {
       if (b.dataset.act === 'pause') { if (G.pauseGame) G.pauseGame(); return; }
       const k = b.dataset.k;
@@ -153,7 +160,8 @@ export class Touch {
       if (o && el.dataset.t !== o) { el.dataset.t = o; el.textContent = (i + 1) + '  ' + o; }
     }
     b.app.style.display = G.phoneOpen && G.phone.mapUnlocked ? '' : 'none';
-    b.app.querySelector('span').textContent = ui.phoneTab === 'map' ? 'Chat' : 'Karte';
+    const toChat = ui.phoneTab === 'map';
+    if (b.app.dataset.mode !== String(toChat)) { b.app.dataset.mode = String(toChat); b.app.querySelector('.ic').innerHTML = toChat ? ICONS.chat : ICONS.map; b.app.querySelector('span').textContent = toChat ? 'Chat' : 'Karte'; }
     b.phone.classList.toggle('attn', !!ui.reply && !G.phoneOpen);
     b.phone.classList.toggle('on', !!G.phoneOpen);
     document.body.classList.toggle('phoneopen', !!G.phoneOpen);

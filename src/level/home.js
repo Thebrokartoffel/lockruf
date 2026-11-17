@@ -131,6 +131,11 @@ export function buildHome(scene, world, M, B) {
   // Süd mit Tür x 502.2..503.1
   wallX(499.9, 505.4, 4.4, 4.5, Y, CEIL_OG, [[502.2, 503.1, 2.1]], M.wallpaper);
   for (const x of [502.2, 503.1]) B.add(boxGeo(0.06, 2.1, 0.14, 1), M.white, x, Y + 1.05, 4.45);
+  // Zimmertür (Scharnier bei x=502.2, geht ins Zimmer auf)
+  const rDoor = doorPanel(0.88, 2.05); rDoor.position.set(502.21, Y, 4.45); scene.add(rDoor);
+  const rDoorCol = world.addBox(502.2, 503.1, 4.4, 4.5, Y - 0.1, Y + 2.2, { label: 'Zimmertür' });
+  const rAnim = { v: 0, target: 0 };
+  world.updaters.push((dt) => { rAnim.v += (rAnim.target - rAnim.v) * (1 - Math.exp(-1.8 * dt)); rDoor.rotation.y = rAnim.v * 1.45; rDoorCol.enabled = rAnim.v < 0.2; });
   world.addRegionBox(500.0, 504.0, 0.0, 4.4, { label: 'Leons Zimmer', minY: 2.0, maxY: 9 });
   world.addRegionBox(502.2, 503.1, 3.8, 5.1, { label: 'Zimmertür', minY: 2.0, maxY: 9 });
 
@@ -213,8 +218,10 @@ export function buildHome(scene, world, M, B) {
   for (const z of [6.4, 7.3]) B.add(boxGeo(0.14, 2.1, 0.06, 1), M.white, 502.0, Y + 1.05, z);
   // Süd: Badtür (zu)
   wallX(501.95, ST.x0, 9.6, 9.7, Y, CEIL_OG, [[502.6, 503.5, 2.1]]);
-  const bathDoor = doorPanel(0.9, 2.05); bathDoor.position.set(502.6, Y, 9.63); scene.add(bathDoor);
-  col(502.6, 503.5, 9.6, 9.7, Y - 0.1, Y + 2.2);
+  const bathDoor = doorPanel(0.88, 2.05); bathDoor.position.set(502.61, Y, 9.65); scene.add(bathDoor);
+  const bathCol = world.addBox(502.6, 503.5, 9.6, 9.7, Y - 0.1, Y + 2.2, { label: 'Badtür' });
+  const bAnim = { v: 0, target: 0 };
+  world.updaters.push((dt) => { bAnim.v += (bAnim.target - bAnim.v) * (1 - Math.exp(-2.2 * dt)); bathDoor.rotation.y = -bAnim.v * 1.4; bathCol.enabled = bAnim.v < 0.2; });
   // Ost: Außenwand (Podest + Treppenhaus) mit Fenster auf halber Treppe
   wallZ(505.4, 505.6, 4.4, 15.6, 1.5, CEIL_OG, [[8.5, 9.9, 1.8, 0.5]]);
   windowAt(505.38, 2.65, 9.2, 1.3, 1.25, -Math.PI / 2, false);
@@ -226,6 +233,39 @@ export function buildHome(scene, world, M, B) {
   wall(ST.x0, 505.4, 11.15, 11.25, Y, CEIL_OG);
   // Wand Bad/Treppenhaus (OG, über der Abstellkammer)
   wall(ST.x0 - 0.05, ST.x0 + 0.05, 9.7, 11.2, Y, CEIL_OG);
+
+  // ================= OG: Bad =================
+  world.tag = 'Bad';
+  wall(ST.x0 - 0.05, ST.x0 + 0.05, 11.2, 12.7, Y, CEIL_OG);
+  wall(501.95, 502.05, 9.7, 12.7, Y, CEIL_OG, M.white);
+  wall(501.95, ST.x0 + 0.05, 12.6, 12.7, Y, CEIL_OG, M.white);
+  const bTile = new THREE.Mesh(planeGeo(2.3, 3.0, 0.6), tileM); bTile.rotation.x = -Math.PI / 2; bTile.position.set(503.15, Y + 0.004, 11.15); bTile.receiveShadow = true; scene.add(bTile);
+  const bCeil = new THREE.Mesh(planeGeo(2.4, 1.4, 2), M.plasterW); bCeil.rotation.x = Math.PI / 2; bCeil.position.set(503.15, CEIL_OG - 0.002, 12.0); scene.add(bCeil);
+  world.addFloor(502.0, ST.x0, 9.6, 12.65, OG, { label: 'Boden Bad' });
+  world.addSurface(502.0, ST.x0, 9.7, 12.6, 'tile', 2.5, 4.5);
+  world.addRegionBox(502.05, ST.x0 - 0.05, 9.55, 11.86, { label: 'Bad', minY: 2.0, maxY: 9 });
+  world.addRegionBox(502.62, 503.48, 9.2, 10.1, { label: 'Badtür', minY: 2.0, maxY: 9 });
+  // Badewanne mit Duschvorhang (Versteck)
+  B.add(boxGeo(1.74, 0.56, 0.7, 1), M.white, 502.98, Y + 0.28, 12.24);
+  B.add(boxGeo(1.56, 0.02, 0.54, 1), lam('tubIn', { color: 0x9aa0a6 }), 502.98, Y + 0.565, 12.24);
+  world.addBox(502.1, 503.86, 11.88, 12.6, Y - 0.1, Y + 0.56, { label: 'Badewanne' });
+  B.add(cylGeo(0.012, 0.012, 1.78, 6, 1), M.metal, 502.98, Y + 2.02, 11.88, 0, 0, Math.PI / 2);
+  const curtain = new THREE.Mesh(boxGeo(1.0, 1.85, 0.02, 1), lam('curtainB', { color: 0xb8c2b6 }));
+  curtain.geometry.translate(-0.5, 0, 0);
+  curtain.position.set(503.84, Y + 1.08, 11.87); curtain.scale.x = 0.35; scene.add(curtain);
+  // Toilette, Waschbecken, Spiegel, Handtuch, Fensterchen
+  B.add(boxGeo(0.48, 0.38, 0.38, 1), M.white, 503.86, Y + 0.19, 10.2); B.add(boxGeo(0.46, 0.04, 0.38, 1), M.white, 503.86, Y + 0.4, 10.2);
+  B.add(boxGeo(0.17, 0.42, 0.42, 1), M.white, 504.15, Y + 0.62, 10.2);
+  col(503.55, ST.x0, 9.95, 10.45, Y - 0.1, Y + 0.85);
+  B.add(boxGeo(0.44, 0.16, 0.52, 1), M.white, 502.3, Y + 0.84, 10.75); B.add(cylGeo(0.07, 0.08, 0.76, 8, 1), M.white, 502.3, Y + 0.38, 10.75);
+  B.add(cylGeo(0.012, 0.012, 0.16, 6, 1), M.metal, 502.12, Y + 1.0, 10.75, 0, 0, 1.2);
+  col(502.05, 502.55, 10.45, 11.05, Y - 0.1, Y + 0.95);
+  const bMir = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.7), new THREE.MeshPhongMaterial({ color: 0x1a1e24, specular: 0x667788, shininess: 90 }));
+  bMir.position.set(502.07, Y + 1.5, 10.75); bMir.rotation.y = Math.PI / 2; scene.add(bMir);
+  B.add(boxGeo(0.04, 0.6, 0.35, 1), lam('towel', { color: 0x5a6a7a }), 502.08, Y + 1.25, 11.5);
+  windowAt(503.0, Y + 1.85, 12.58, 0.7, 0.5, Math.PI, false);
+  const bMat = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.5), lam('bathmat', { color: 0x6a5a4a })); bMat.rotation.x = -Math.PI / 2; bMat.position.set(503.0, Y + 0.008, 11.5); scene.add(bMat);
+  world.addLamp({ pos: [503.0, Y + 1.7, 12.1], color: 0x7d8ec0, intensity: 1.1, distance: 3.4, visibleDist: 30 });
   // Handlauf an der Außenwand
   {
     const len = Math.hypot(ST.zBot - ST.zTop, OG);
@@ -262,13 +302,25 @@ export function buildHome(scene, world, M, B) {
   const duvP = new THREE.Mesh(boxGeo(1.5, 0.1, 1.76, 1), lam('duvetP', { color: 0x5a4e44 })); duvP.position.set(498.95, Y + 0.54, 6.9); duvP.castShadow = true; scene.add(duvP);
   // schlafende Gestalt unter der Decke
   const lump = new THREE.Group();
-  const lb = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 1.1, 4, 10), lam('duvetP', {})); lb.rotation.z = Math.PI / 2; lb.scale.set(1, 1, 0.75); lb.position.set(0.15, 0.12, 0); lump.add(lb);
+  const lb = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 1.1, 4, 10), lam('duvetP', {})); lb.rotation.z = Math.PI / 2; lb.scale.set(0.72, 1, 1.45); lb.position.set(0.15, 0.1, 0); lump.add(lb);
+  // Schulter und ein Arm auf der Decke
+  const lsh = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), lam('duvetP', {})); lsh.scale.set(1, 0.75, 1.3); lsh.position.set(-0.42, 0.12, 0.02); lump.add(lsh);
+  const larm = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 0.42, 3, 8), lam('dadSkin', { color: 0x8d6e5a })); larm.rotation.z = Math.PI / 2 - 0.12; larm.rotation.y = 0.35; larm.position.set(-0.12, 0.24, 0.27); lump.add(larm);
   const lh = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), lam('dadSkin', { color: 0x8d6e5a })); lh.position.set(-0.68, 0.14, 0.05); lump.add(lh);
   const lhair = new THREE.Mesh(new THREE.SphereGeometry(0.115, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), lam('dadHair', { color: 0x2a2420 })); lhair.position.copy(lh.position); lhair.rotation.z = Math.PI / 2; lump.add(lhair);
   lump.position.set(498.6, Y + 0.56, 6.55); lump.traverse((o) => { if (o.isMesh) o.castShadow = true; }); scene.add(lump);
   col(497.6, 499.7, 6.0, 7.8, Y - 0.1, Y + 0.65);
   // Nachttische + Lampe
   for (const z of [5.7, 8.1]) B.add(boxGeo(0.45, 0.5, 0.4, 1), M.wood, 497.85, Y + 0.25, z);
+  col(497.6, 498.1, 5.48, 5.92, Y - 0.1, Y + 0.55); col(497.6, 498.1, 7.88, 8.32, Y - 0.1, Y + 0.55);
+  world.addRegionBox(497.65, 501.95, 4.5, 9.0, { label: 'Elternschlafzimmer', minY: 2.0, maxY: 9 });
+  world.addRegionBox(501.3, 502.7, 6.45, 7.25, { label: 'Elterntür', minY: 2.0, maxY: 9 });
+  // Mamas Seite: zweite Gestalt (erst sichtbar, wenn sie ins Bett gegangen ist)
+  const momLump = new THREE.Group();
+  { const b2 = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 1.0, 4, 10), lam('duvetP', {})); b2.rotation.z = Math.PI / 2; b2.scale.set(0.7, 1, 1.4); b2.position.set(0.12, 0.08, 0); momLump.add(b2);
+    const h2 = new THREE.Mesh(new THREE.SphereGeometry(0.105, 10, 8), lam('momSkin', { color: 0xa58066 })); h2.position.set(-0.66, 0.13, 0); momLump.add(h2);
+    const hh = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), lam('momHair', { color: 0x3a2a22 })); hh.scale.set(1.1, 0.8, 1.25); hh.position.set(-0.7, 0.12, 0.02); momLump.add(hh); }
+  momLump.position.set(498.6, Y + 0.56, 7.3); momLump.visible = false; scene.add(momLump);
   B.add(cylGeo(0.08, 0.13, 0.16, 12, 1), lam('lampShade', {}), 497.85, Y + 0.72, 8.1);
   const bedLampLight = world.addLamp({ pos: [498.2, Y + 0.9, 8.0], color: 0xffb070, intensity: 4.5, distance: 6, visibleDist: 30, enabled: false });
   const bedLampGlow = haloSprite(0xffb070, 0.6, 0.0); bedLampGlow.position.set(497.85, Y + 0.75, 8.1); scene.add(bedLampGlow);
@@ -341,7 +393,7 @@ export function buildHome(scene, world, M, B) {
   const fridgeAnim = { v: 0, t: 0 };
   world.updaters.push((dt) => { fridgeAnim.v += (fridgeAnim.t - fridgeAnim.v) * (1 - Math.exp(-4 * dt)); fDoor.rotation.y = -fridgeAnim.v * 1.6; });
   // Zettel am Kühlschrank
-  const note = signMesh([{ t: 'Bin bis Sonntag', font: '30px "Comic Sans MS"' }, { t: 'bei Oma.', font: '30px "Comic Sans MS"' }, { t: 'Kuss, Mama', font: '26px "Comic Sans MS"' }], 0.16, 0.16, { w: 200, h: 200, bg: '#e6e0a8', border: null });
+  const note = signMesh([{ t: 'LEON:', font: 'bold 30px "Comic Sans MS"' }, { t: 'Müll raus!!', font: '30px "Comic Sans MS"' }, { t: '– Papa', font: '26px "Comic Sans MS"' }], 0.16, 0.16, { w: 200, h: 200, bg: '#e6e0a8', border: null });
   note.position.set(504.69, 1.35, 3.0); note.rotation.y = -Math.PI / 2; scene.add(note);
   // Tisch + Stühle
   B.add(boxGeo(0.8, 0.04, 0.8, 1), M.wood, 502.9, 0.74, 4.5); for (const [dx, dz] of [[-0.35, -0.35], [0.35, -0.35], [-0.35, 0.35], [0.35, 0.35]]) B.add(boxGeo(0.04, 0.74, 0.04, 1), M.wood, 502.9 + dx, 0.37, 4.5 + dz);
@@ -351,13 +403,13 @@ export function buildHome(scene, world, M, B) {
   const clock = new THREE.Mesh(cylGeo(0.14, 0.14, 0.03, 20, 1), lam('clockF', { color: 0xe0dcd0 })); clock.rotation.z = Math.PI / 2; clock.position.set(501.07, 2.1, 5.0); scene.add(clock);
   const kitchenLampL = world.addLamp({ pos: [503.2, 2.6, 4.1], color: 0xfff0d8, intensity: 6, distance: 7, visibleDist: 30, enabled: false });
   B.add(cylGeo(0.2, 0.25, 0.1, 14, 1), lam('ceilLamp', {}), 503.2, EY - 0.05, 4.1);
-  // Leons Schlüssel auf der Arbeitsplatte
+  // Hausschlüssel (Papa nimmt ihn abends mit hoch, liegt auf seinem Nachttisch)
   const lkeys = new THREE.Group();
   for (let i = 0; i < 2; i++) { const k = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.004, 0.06), lam('hkey', { color: 0xb09a50 })); k.position.set(i * 0.025, 0, 0); k.rotation.y = i * 0.4; lkeys.add(k); }
   const lring = new THREE.Mesh(new THREE.TorusGeometry(0.02, 0.004, 4, 10), lam('hkey', {})); lring.rotation.x = Math.PI / 2; lring.position.set(0.01, 0, -0.04); lkeys.add(lring);
   const lfob = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.01, 0.045), lam('fobG', { color: 0x2a6a3a })); lfob.position.set(0.04, 0.003, -0.07); lkeys.add(lfob);
-  lkeys.position.set(504.15, 0.95, 2.45); scene.add(lkeys);
-  G.objects.homeKeys = { group: lkeys, pos: new THREE.Vector3(504.15, 0.96, 2.45) };
+  lkeys.position.set(497.9, OG + 0.505, 5.62); lkeys.rotation.y = 0.6; scene.add(lkeys);
+  G.objects.homeKeys = { group: lkeys, pos: new THREE.Vector3(497.9, OG + 0.52, 5.62) };
   world.addRegionBox(501.05, 505.4, 2.65, 5.95, { label: 'Küche', minY: -1, maxY: 1.6 });
 
   // --- EG Flur + Abstellkammer unter der Treppe ---
@@ -366,7 +418,12 @@ export function buildHome(scene, world, M, B) {
   for (const z of [11.6, 13.2]) B.add(boxGeo(0.14, 2.1, 0.06, 1), M.white, 502.0, 1.05, z);
   // Kammerwand mit Tür z 7.6..8.4, hinten zu (z 9.9)
   wallZ(ST.x0 - 0.05, ST.x0 + 0.05, ST.zTop, ST.zBot, E, EY, [[7.6, 8.4, 2.0]]);
-  wall(ST.x0 + 0.05, 505.4, 9.85, 9.95, E, EY);
+  {
+    // Rückwand nur bis unter die Stufe darüber (früher ging sie bis zur Decke und versperrte die Treppe)
+    const top = stairH(9.9) - 0.08;
+    box(505.4 - (ST.x0 + 0.05), top, 0.1, wallM, (ST.x0 + 0.05 + 505.4) / 2, top / 2, 9.9);
+    world.addBox(ST.x0 + 0.05, 505.4, 9.85, 9.95, -1, top - 0.02, { label: 'Kammer-Rückwand' });
+  }
   wall(ST.x0 + 0.05, 505.4, ST.zTop - 0.05, ST.zTop + 0.05, E, EY);
   // Lamellentür (steht halb offen)
   const cDoor = new THREE.Group();
@@ -433,6 +490,25 @@ export function buildHome(scene, world, M, B) {
   B.add(boxGeo(0.06, 0.68, 1.2, 1), M.black, 501.82, 0.92, 9.0);
   const led = new THREE.Mesh(new THREE.SphereGeometry(0.008, 6, 4), emissive(0xff2a1a)); led.position.set(501.78, 0.6, 9.45); scene.add(led);
   const ledGlow = haloSprite(0xff2a1a, 0.12, 0.6); ledGlow.position.copy(led.position); scene.add(ledGlow);
+  const tvScr = new THREE.Mesh(new THREE.PlaneGeometry(1.12, 0.62), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+  tvScr.position.set(501.785, 0.92, 9.0); tvScr.rotation.y = -Math.PI / 2; scene.add(tvScr);
+  const tvFlick = (t) => 0.55 + 0.45 * Math.abs(Math.sin(t * 7.3) * Math.sin(t * 2.1 + 1.3));
+  const tvLight = world.addLamp({ pos: [500.95, 1.0, 9.0], color: 0x8aa8ff, intensity: 5.5, distance: 7, visibleDist: 30, enabled: false, flicker: tvFlick });
+  let tvOn = false;
+  const tvUp = (dt) => { if (!tvOn) return; const k = tvFlick(G.time); tvScr.material.color.setRGB(0.22 * k, 0.27 * k, 0.4 * k); };
+  tvUp.visual = true; world.updaters.push(tvUp);
+
+  // ================= Gestalt hinter den Fenstern (nur ein Schatten, ohne Text) =================
+  const figTex = (() => {
+    const c = document.createElement('canvas'); c.width = 64; c.height = 128; const x = c.getContext('2d');
+    x.fillStyle = '#000'; x.filter = 'blur(1.5px)';
+    x.beginPath(); x.ellipse(32, 22, 11, 13, 0, 0, Math.PI * 2); x.fill();
+    x.beginPath(); x.moveTo(8, 128); x.quadraticCurveTo(6, 50, 22, 40); x.lineTo(42, 40); x.quadraticCurveTo(58, 50, 56, 128); x.fill();
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  })();
+  const mkFig = (x, y, z, ry, h) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(h * 0.5, h), new THREE.MeshBasicMaterial({ map: figTex, transparent: true, opacity: 0.92, depthWrite: false })); m.position.set(x, y, z); m.rotation.y = ry; m.visible = false; scene.add(m); return m; };
+  const figKitchen = mkFig(503.45, 1.5, 2.035, 0, 0.9);
+  const figLiving = mkFig(496.035, 1.35, 8.95, Math.PI / 2, 1.1);
   // Sessel, Stehlampe, Regal, Pflanze
   B.add(boxGeo(0.8, 0.45, 0.8, 1), sofaM, 499.2, 0.22, 12.9); B.add(boxGeo(0.8, 0.8, 0.2, 1), sofaM, 499.2, 0.5, 13.3); col(498.8, 499.6, 12.5, 13.4, -1, 0.9);
   B.add(cylGeo(0.015, 0.015, 1.5, 6, 1), M.black, 500.3, 0.75, 13.6); B.add(cylGeo(0.12, 0.2, 0.25, 12, 1), lam('lampShade', {}), 500.3, 1.55, 13.6);
@@ -453,6 +529,11 @@ export function buildHome(scene, world, M, B) {
   hair.position.set(0, 0.145, 0.01); dad.neck.add(hair);
   const stubble = new THREE.Mesh(new THREE.SphereGeometry(0.108, 10, 8, 0, Math.PI * 2, Math.PI * 0.55, Math.PI * 0.3), lam('stubble', { color: 0x4a3a30 })); stubble.position.set(0, 0.13, -0.004); dad.neck.add(stubble);
   dad.root.visible = false; scene.add(dad.root);
+  const mom = makeHuman({ coat: 0x7a5c66, pants: 0x4e4048, skin: 0xa58066, hood: false, height: 1.68, longCoat: true });
+  { const mh = lam('momHair', {});
+    const capH = new THREE.Mesh(new THREE.SphereGeometry(0.118, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.56), mh); capH.position.set(0, 0.135, 0.008); mom.neck.add(capH);
+    const backH = new THREE.Mesh(boxGeo(0.23, 0.34, 0.07, 1), mh); backH.position.set(0, 0.02, 0.085); mom.neck.add(backH); }
+  mom.root.visible = false; scene.add(mom.root);
 
   const hallLampL = world.addLamp({ pos: [503.15, CEIL_OG - 0.3, 6.9], color: 0xffe2b8, intensity: 7, distance: 8, visibleDist: 40, enabled: false });
   B.add(cylGeo(0.18, 0.22, 0.12, 14, 1), lam('ceilLamp', {}), 503.15, CEIL_OG - 0.06, 6.9);
@@ -469,12 +550,25 @@ export function buildHome(scene, world, M, B) {
       landing: [504.85, OG, 6.4], stairTop: [504.85, OG, 7.05], stairBot: [504.85, 0, 11.6], diele: [503.9, 0, 12.4],
       corrN: [503.15, 0, 8.9], kitchenDoor: [502.85, 0, 6.2], fridge: [504.2, 0, 3.15],
       lookLiving: [498.9, 1.0, 12.0], fridgeLook: [505.2, 1.2, 3.15], lookHall: [503.7, OG + 1.2, 4.9], closet: [504.9, 1.0, 8.2],
+      leonDoor: [502.65, OG, 5.05], leonLook: [501.6, OG + 0.7, 2.0], frontDoor: [503.6, 0, 14.4], lookFront: [503.6, 1.2, 15.6],
+      bathLook: [503.0, OG + 1.0, 11.0],
+    },
+    // Mamas Weg vom Sofa ins Bett
+    momRoute: [[499.6, 0, 9.0], [499.75, 0, 10.9], [501.2, 0, 12.35], [502.7, 0, 12.4], [503.9, 0, 12.2], [504.85, 0, 11.7], [504.85, OG, 7.05], [504.85, OG, 6.4], [503.35, OG, 6.6], [502.75, OG, 6.85], [501.45, OG, 6.85], [500.25, OG, 7.85]],
+    mom, momLump, sofaSeat: [498.88, 0, 8.95],
+    // Verstecke: drin ist man unsichtbar (wie die Abstellkammer)
+    spots: {
+      kammer: { id: 'kammer', name: 'In der Abstellkammer verstecken', pos: new THREE.Vector3(ST.x0, 0.9, 8.0), inside: [504.85, 0, 8.0], yaw: Math.PI / 2, out: [503.55, 0, 8.0], overlay: 'slats' },
+      schrank: { id: 'schrank', name: 'Im Kleiderschrank verstecken', pos: new THREE.Vector3(500.7, OG + 1.1, 3.75), inside: [500.38, OG, 3.75], yaw: -Math.PI / 2, out: [501.2, OG, 3.75], overlay: 'slats' },
+      bett: { id: 'bett', name: 'Ins Bett legen, schlafend stellen', pos: new THREE.Vector3(500.55, OG + 0.55, 1.2), inside: [500.55, OG + 0.42, 1.35], yaw: Math.atan2(-2.1, -3.9), lying: true, out: [501.45, OG, 1.5], overlay: 'blanket' },
+      dusche: { id: 'dusche', name: 'Hinter den Duschvorhang', pos: new THREE.Vector3(503.0, OG + 1.1, 11.86), inside: [502.7, OG + 0.08, 12.26], yaw: 0, out: [502.95, OG, 11.25], overlay: 'curtain' },
+      elternschrank: { id: 'elternschrank', name: 'Im Schrank verstecken', pos: new THREE.Vector3(499.4, OG + 1.1, 9.0), inside: [499.4, OG, 9.3], yaw: 0, out: [499.4, OG, 8.5], overlay: 'slats' },
     },
     // Verstecke: geduckt bist du dort unsichtbar, solange er nicht direkt danebensteht
     hideZones: [
       { minX: 496.6, maxX: 498.25, minZ: 7.5, maxZ: 10.5, y: 0, name: 'hinter dem Sofa' },
       { minX: 496.0, maxX: 497.4, minZ: 2.0, maxZ: 3.4, y: 0, name: 'Ecke im Essbereich' },
-      { minX: 500.0, maxX: 504.0, minZ: 0.0, maxZ: 3.5, y: OG, name: 'Leons Zimmer' },
+      { minX: 501.1, maxX: 502.2, minZ: 0.0, maxZ: 1.0, y: OG, name: 'unter dem Schreibtisch' },
     ],
     closet: { door: new THREE.Vector3(ST.x0, 0.9, 8.0), inside: [504.85, 0, 8.0], out: [503.55, 0, 8.0] },
     parentsDoor: { set(v, anim = false) { doorAnim.target = v; if (!anim) doorAnim.v = v; } },
@@ -482,6 +576,12 @@ export function buildHome(scene, world, M, B) {
     handle() { const hd = pDoor.userData.handle; hd.rotation.z = -0.5; setTimeout(() => { hd.rotation.z = 0; }, 450); },
     bedLamp(on) { bedLampLight.enabled = on; bedLampGlow.material.opacity = on ? 0.6 : 0; },
     hallLamp(on) { hallLampL.enabled = on; },
+    roomDoor: { set(v, anim = false) { rAnim.target = v; if (!anim) rAnim.v = v; }, get open() { return rAnim.target > 0.1; }, pos: new THREE.Vector3(502.65, OG + 1.0, 4.45) },
+    bathDoor: { set(v, anim = false) { bAnim.target = v; if (!anim) bAnim.v = v; }, get open() { return bAnim.target > 0.1; }, pos: new THREE.Vector3(503.05, OG + 1.0, 9.65) },
+    curtain(closed) { curtain.scale.x = closed ? 1.72 : 0.35; },
+    tv(on) { tvOn = on; tvLight.enabled = on; if (!on) tvScr.material.color.set(0x000000); },
+    figure(which, on) { (which === 'kitchen' ? figKitchen : figLiving).visible = on; },
+    figureMesh(which) { return which === 'kitchen' ? figKitchen : figLiving; },
     kitchenLamp(on) { kitchenLampL.enabled = on; },
     fridge(open) { fridgeAnim.t = open ? 1 : 0; fridgeLight.enabled = open; },
     frontDoor: { set(v, anim = false) { frontAnim.t = v; if (!anim) frontAnim.v = v; fDoorCol.enabled = v < 0.1; outLamp.enabled = v > 0; }, pos: new THREE.Vector3(503.6, 1.1, 15.35), chainPos: new THREE.Vector3(503.96, 1.45, 15.37) },

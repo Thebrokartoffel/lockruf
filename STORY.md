@@ -16,9 +16,9 @@ Es ist eine Aufnahme aus einem Lautsprecher im Baum. Ein Lockruf.
 ## Ablauf (linear)
 0. **Cold Open – Keller, 03:12.** Du stehst unten an der Kellertreppe. Oben knallt die Luke zu, ein Riegel. Summen der Lüftung, flackerndes Licht. Blackout. „Drei Stunden vorher.“
 1. **Intro-Erzählung** (Leon erzählt, Fears-to-Fathom-Stil).
-2. **Zuhause, 01:43.** Zweistöckiges Haus. Handy vibriert: Deniz. Handy nehmen, Jacke. Im Obergeschoss am Schlafzimmer vorbei (Papa schnarcht, Dielen knarzen; wird es zu laut, hört das Schnarchen auf, das Bett knarzt, Licht unter der Tür, die Klinke geht – sieht er dich, ist die Nacht vorbei). Treppe runter (Stufen 3, 7 und 11 knarzen). Haustür zu, der Schlüssel liegt in der Küche. Beim Nehmen klirrt er. Papa wacht auf und kommt runter. Verstecken: Abstellkammer unter der Treppe (Blick durch die Lamellen) oder geduckt hinter dem Sofa. Er trinkt in der Küche, bleibt vor der Kammer stehen, geht wieder hoch. Kette lösen, leise aufschließen, raus in die kalte Luft.
+2. **Zuhause, 01:43.** Zweistöckiges Haus. Handy vibriert: Deniz. Handy nehmen, Jacke, Zimmertür langsam aufmachen. Im Obergeschoss am Schlafzimmer vorbei (Papa schnarcht, Dielen knarzen; wird es zu laut, hört das Schnarchen auf, das Bett knarzt, Licht unter der Tür, die Klinke geht – sieht er dich, ist die Nacht vorbei). Treppe runter (Stufen 3, 7 und 11 knarzen). Haustür zu, das Schlüsselbrett leer. In der Küche: Zettel am Kühlschrank, hinter dem Fenster steht kurz jemand. Im Wohnzimmer flackert der Fernseher: **Mama sitzt im Dunkeln auf dem Sofa.** Sie warnt dich vor Papa („heute nicht gut drauf“), verrät, dass er den Hausschlüssel mit hochgenommen hat, und geht ins Bett. Also wieder hoch: Elterntür ganz langsam öffnen, geduckt zum Nachttisch, Schlüssel vorsichtig nehmen (wer zu früh loslässt, lässt ihn klirren). Papa wird trotzdem wach und sucht das ganze Haus ab: Tür, Flur, dein Zimmer, Bad, Treppe, Haustür, Küche, Kühlschrank. Verstecke: Kleiderschrank, dein Bett (schlafend stellen), Duschvorhang im Bad, Schrank im Schlafzimmer, Abstellkammer unter der Treppe, geduckt hinter dem Sofa. Er geht wieder ins Bett. Kette lösen, leise aufschließen, raus in die kalte Luft.
 3. **Straße → Waldspielpark Goetheturm.** Laternen, geparkte Autos, Kürbis auf einer Treppe. Am Turm: Bauzaun, „ab 01.11. geschlossen“. Auf der Bank: Deniz' Energy-Dose, noch kalt. Deniz schreibt: „bin schon im wald haha“.
-4. **Hügelschneise.** Breiter Waldweg. „ich seh dein licht 👀“ – „da steht jemand hinter dir“ – Silhouette im Nebel – „spaß 😂“.
+4. **Hügelschneise.** Kurviger Kiesweg mit Abzweigungen, die alle im Nichts enden (Privatweg mit umgestürztem Baum, Hochsitz, Holzpolter). Links und rechts dichtes Unterholz. „ich seh dein licht 👀“ – „da steht jemand hinter dir“ – Silhouette im Nebel – „spaß 😂“.
 5. **Weg gesperrt** (umgestürzter Baum, Forstarbeiten). „geh links durchs gebüsch“. Durchzwängen (ducken), Äste wegräumen.
 6. **Verlaufen.** Rot-weißes Flatterband an Bäumen (du denkst, Deniz hat markiert). Derselbe gespaltene Baum taucht zweimal auf. Kein Netz. Akku sinkt.
 7. **Der Schrei.** Eine Frau ruft um Hilfe. Nach ~50 Sekunden: exakt derselbe Schrei. Du rennst, stolperst, **Handy fällt runter**, Licht weg. Im Dunkeln am Display-Leuchten wiederfinden.
@@ -27,8 +27,8 @@ Es ist eine Aufnahme aus einem Lautsprecher im Baum. Ein Lockruf.
 10. **Der Keller.** Handy laden. Karte vom Stadtwald mit roten Markierungen, Polaroids von Leuten auf Waldwegen, Zeitungsausschnitt „Joggerin vermisst“. Notizbuch. Gerät „RUF 2“ → abspielen → **der Schrei, laut, im Raum**. Schlüssel „TOR 3“. Oben: Schritte. Luke knallt zu (= Cold Open).
 11. **„Deniz“: hast du was gefunden? 🙂**
 12. **Rätsel:** Lüftung = einziger Weg raus. Sicherungskasten (Licht / Lüftung / Steckdose). Lüftung aus → Stille → man hört ihn oben laufen. Schraubendreher aus der Werkbank, Gitter abschrauben, durch den Schacht kriechen, Leiter hoch.
-13. **Flucht.** Draußen hinter der Hütte. **Ast kracht runter.** Er hört es, kommt raus. Verfolgung am Zaun entlang, über den Ast und einen liegenden Stamm springen. Tor aufschließen (halten, Schlüssel klappern), durch, Tor fällt zu.
-14. **Bach, Gasse, Kleingärten.** Er rüttelt am Tor – und hat einen eigenen Schlüssel. Er bleibt dran. Mit Anlauf über den Bach, durch die Gasse (Tonne, Paletten, Schutt). **Bewegungsmelder geht an – Vogelscheuche.** Er bleibt im Dunkeln stehen, will nicht gesehen werden, geht. „bis bald leon“.
+13. **Flucht.** Draußen hinter der Hütte. **Ast kracht runter.** Er hört es, kommt raus. Verfolgung am Zaun entlang: über den Ast springen, unter einem hängenden Stamm durchducken, Slalom zwischen zwei Stämmen, über einen liegenden Stamm springen. Tor aufschließen (halten, Schlüssel klappern), durch, Tor fällt zu.
+14. **Bach, Gasse, Kleingärten.** Er rüttelt am Tor – und hat einen eigenen Schlüssel. Er bleibt dran. Mit Anlauf über den Bach, durch die Gasse (Tonne, Paletten, Schutt), in den Gärten über eine Schubkarre springen und unter der Wäscheleine durchducken. **Bewegungsmelder geht an – Vogelscheuche.** Er bleibt im Dunkeln stehen, will nicht gesehen werden, geht. „bis bald leon“.
 15. **Ende, 03:31.** Deniz sitzt vor deiner Haustür. „Mein Handy ist weg. Hab's am Turm liegen lassen.“ Dein Handy vibriert. „Deniz“: 🙂
 16. **Epilog** (Text auf Schwarz).
 
@@ -39,4 +39,6 @@ Es ist eine Aufnahme aus einem Lautsprecher im Baum. Ein Lockruf.
 4. Bewegungsmelder + Vogelscheuche (laut)
 5. Papa erwischt dich im Haus (nur wenn du zu laut oder sichtbar bist)
 6. Gestalt zwischen den Bäumen im Abseits (leise, verschwindet beim Hinsehen)
+7. Mama auf dem Sofa im Dunkeln (Schreck, harmlos)
+8. Schatten ohne Text, bei denen man nicht sicher ist: hinter dem Küchenfenster, hinter dem Wohnzimmerfenster, auf der Straße, hinter dem Turm, quer über die Schneise
 + Verfolgung mit Game Over, wenn er dich erwischt (Checkpoint am Tor).

@@ -12,7 +12,7 @@ const STANCE = {
   crawl: { h: 0.72, eye: 0.48, speed: 0.85 },
 };
 // Rennen: 2.5 m/s * 2.3 = 5.75 m/s. Volle Ausdauer reicht für 12 s Dauersprint.
-const SPRINT_MUL = 2.3, SPRINT_SECS = 12, REGEN_SECS = 7, REGEN_IDLE_SECS = 4.5, EXHAUST_UNTIL = 0.3;
+const SPRINT_MUL = 2.3, SPRINT_SECS = 30, REGEN_SECS = 5, REGEN_IDLE_SECS = 3, EXHAUST_UNTIL = 0.22;   // deutlich mehr Ausdauer
 
 export class Player {
   constructor(camera, scene) {

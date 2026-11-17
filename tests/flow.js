@@ -17,14 +17,19 @@ async () => {
       await use('Handy nehmen');
       await reply(1); await reply(0); await reply(0);
       await waitFor('jacke', obj('Jacke')); await use('Jacke');
+      await waitFor('zimmertür', obj('Tür auf')); await use('Tür langsam öffnen');
       await waitFor('schleich', obj('Schleich'));
       __tp(504.85, 11.95, 0); await waitFor('haustür', obj('Haustür'), 30000);
-      __tp(503.9, 3.3, 0); await use('Schlüssel nehmen');
+      await use('Tür öffnen'); await waitFor('schlüssel suchen', obj('Hausschlüssel'), 8000);
+      __tp(500.4, 11.2, 0); await waitFor('mama vorbei', obj('Schlafzimmer'), 90000);
+      log('Mama im Bett: ' + __G.objects.home.momLump.visible);
+      __tp(502.8, 6.85); await use('Tür ganz langsam öffnen');
+      __tp(498.55, 5.2); await use('Schlüssel ganz vorsichtig nehmen');
       await waitFor('patrol', () => JSON.parse(__state()).dad === 'patrol', 30000);
-      __tp(503.55, 8.0, 0); await use('In der Abstellkammer verstecken');
+      __tp(502.95, 11.25); await use('Hinter den Duschvorhang');
       await waitFor('dad zurück', () => JSON.parse(__state()).dad === 'sleep', 150000);
       await waitFor('raus', obj('Raus'), 30000);
-      await use('Rauskommen'); await use('Kette lösen'); await use('Tür leise aufschließen');
+      await use('Rauskommen'); __tp(504.0, 14.2, 0); await use('Kette lösen'); await use('Tür leise aufschließen');
       await waitFor('ch2', () => st().ch === 2, 30000);
     }
     if (!only || only === 2) {
