@@ -9,7 +9,8 @@
     "pages": "node build.mjs --pages",
     "app": "node build.mjs --min && node app/prepare.mjs && cd app && npm install && npx electron .",
     "app:pack": "node build.mjs --min && node app/prepare.mjs && cd app && npm install && npx @electron/packager . LOCKRUF --platform=win32 --arch=x64 --out=../release --overwrite",
-    "guide": "python tools/guide.py LOCKRUF_Guide.pdf"
+    "guide": "python tools/guide.py LOCKRUF_Guide.pdf",
+    "deploy": "git subtree push --prefix docs origin gh-pages"
   },
   "dependencies": {
     "esbuild": "^0.28.2",

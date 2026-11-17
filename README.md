@@ -72,7 +72,7 @@ npm run build    # dist/  minifiziert
 npm run pages    # docs/  Web-Version für GitHub Pages, wird mit eingecheckt
 ```
 
-GitHub Pages: Settings → Pages → „Deploy from a branch“ → `main`, Ordner `/docs`. Nach Code-Änderungen `npm run pages` ausführen und `docs/` mit committen.
+GitHub Pages läuft aus dem Branch `gh-pages`, der genau den Inhalt von `docs/` enthält. Nach Code-Änderungen: `npm run pages`, `docs/` committen, dann `npm run deploy` (schiebt `docs/` nach `gh-pages`, nach ein bis zwei Minuten ist die neue Version online).
 
 Test-Hooks (`window.__G` usw.) gibt es nur mit `?dev` oder `?test` in der Adresse oder nachdem der Godmode geöffnet wurde. `?touch` erzwingt die Touch-Steuerung, `?desktop` schaltet sie ab.
 
